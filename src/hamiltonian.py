@@ -1,5 +1,6 @@
 import qutip as qt
 import numpy as np
+from qilisdk.analog import Schedule, X, Y, Z
 
 
 sx = qt.sigmax()
@@ -25,6 +26,8 @@ class QiliSDKHamiltonian():
         assert qubit1 != qubit2,    f"Qubits 1 and 2 are the same, cannot apply self-interaction term"
 
         self.H += weight*Z(qubit1)*Z(qubit2)
+
+
 
 
 class QutipHamiltonian():
@@ -54,6 +57,7 @@ class QutipHamiltonian():
             sz_list.append(qt.tensor(op_list))
 
         return sx_list, sy_list, sz_list 
+    
     
     def add_x_field(self, qubit, weight=1.):
 
