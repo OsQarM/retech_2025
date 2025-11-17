@@ -2,6 +2,21 @@ import numpy as np
 import qutip as qt
 from typing import List, Tuple
 
+
+
+def classical_fidelity(prob_dict1, prob_dict2):
+    """Classical fidelity between two probability distributions stored as dictionaries"""
+    # Get all unique keys from both dictionaries (the ones missing have value 0)
+    all_keys = set(prob_dict1.keys()) | set(prob_dict2.keys())
+    
+    # Extract values for all keys, using 0 for missing keys
+    prob_array1 = np.array([prob_dict1.get(key, 0.0) for key in all_keys])
+    prob_array2 = np.array([prob_dict2.get(key, 0.0) for key in all_keys])
+    
+    return np.sum(np.sqrt(prob_array1 * prob_array2))
+
+
+
 class NegativeLogLikelihoodEstimator:
     def __init__(self):
         pass
@@ -171,3 +186,5 @@ class NegativeLogLikelihoodEstimator:
         average_loss = total_loss / len(dataset)
         
         return average_loss
+    
+

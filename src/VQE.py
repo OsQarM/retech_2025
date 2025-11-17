@@ -1,3 +1,12 @@
+import sys
+import numpy as np
+
+sys.path.append('/Users/omichel/Desktop/qilimanjaro/projects/retech/retech_2025/src')
+
+import estimator
+import VQE
+
+
 from qilisdk.backends import QutipBackend
 from qilisdk.digital import Circuit, M, U1, CNOT, U2, U3, CZ, RX, RZ, H
 from qilisdk.digital.ansatz import HardwareEfficientAnsatz
@@ -6,6 +15,7 @@ from qilisdk.functionals.variational_program import VariationalProgram
 from qilisdk.functionals.sampling import Sampling, SamplingResult
 from qilisdk.functionals.time_evolution import TimeEvolution
 from scipy.optimize import minimize
+
 
 def generate_connectivity_list(size, mode = 'ATA', boundary = 'open'):
     connectivity = []
@@ -51,3 +61,14 @@ def build_ansatz_circuit(params, nqubits, layers, connectivity):
             c.add(RZ(target, phi=lam).controlled(control))
 
     return c
+
+
+def fidelity_cost(params, nqubits, layers, connectivity, true_probabilities, backend=QutipBackend):
+    circuit = VQE.build_ansatz_circuit(np.array(params), nqubits, layers, connectivity)
+    circuit_simulation = backend.execute(functional=Sampling(circuit, nshots = 10000))
+    loss = 1 - estimator.classical_fidelity(true_probabilities, circuit_simulation.probabilities)
+    return float(loss)
+
+
+def nll_cost():
+    pass

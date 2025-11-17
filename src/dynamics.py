@@ -138,6 +138,8 @@ def measure_qubit(state, qubit_index, basis='Z', num_shots=1000):
     return sample_measurements(state, measurement_basis, num_shots)
 
 
+
+
 def get_bitstring_probabilities(final_state, basis='Z'):
     """
     Get probabilities for all bitstrings from a quantum state
