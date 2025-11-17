@@ -7,7 +7,7 @@ import os
 
 def plot_expectations(z_data, N, filepath=None):
     # Create simplified figure with only line plot
-    fig = plt.figure(figsize=(8, 6), dpi=300)
+    fig = plt.figure(figsize=(8, 6), dpi=100)
 
     # Custom colors
     first_color = '#1f77b4'  # Blue

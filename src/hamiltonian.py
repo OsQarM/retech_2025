@@ -62,12 +62,12 @@ class QutipHamiltonian():
     def add_x_field(self, qubit, weight=1.):
 
         assert qubit <= self.size-1, f"Index {qubit} out of range. Size of the system is {self.size}"
-        self.H += self.sx_list[qubit]
+        self.H += weight*self.sx_list[qubit]
 
     def add_z_field(self, qubit, weight=1.):
 
         assert qubit <= self.size-1, f"Index {qubit} out of range. Size of the system is {self.size}"
-        self.H += self.sz_list[qubit]
+        self.H += weight*self.sz_list[qubit]
 
     def add_ZZ_term(self, qubit1, qubit2, weight=1.):
 
@@ -75,7 +75,7 @@ class QutipHamiltonian():
         assert qubit2 <= self.size-1, f"Index {qubit2} out of range. Size of the system is {self.size}"
         assert qubit1 != qubit2,    f"Qubits 1 and 2 are the same, cannot apply self-interaction term"
 
-        self.H += self.sz_list[qubit1]*self.sz_list[qubit2]
+        self.H += weight*self.sz_list[qubit1]*self.sz_list[qubit2]
     
 
     
