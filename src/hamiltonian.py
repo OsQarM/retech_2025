@@ -76,6 +76,26 @@ class QutipHamiltonian():
         assert qubit1 != qubit2,    f"Qubits 1 and 2 are the same, cannot apply self-interaction term"
 
         self.H += weight*self.sz_list[qubit1]*self.sz_list[qubit2]
+
+    
+
+
+def create_random_hamiltonian(Nqubits, min_weight, max_weight):
+    H_out = QutipHamiltonian(Nqubits)
+    single_x_weights = np.random.uniform(min_weight, max_weight, size=Nqubits)
+    single_z_weights = np.random.uniform(min_weight, max_weight, size=Nqubits)
+
+    interaction_weights = np.random.uniform(min_weight, max_weight, size=int(Nqubits*(Nqubits-1)/2))
+    interaction_counter = 0
+    for i in range(Nqubits):
+        H_out.add_x_field(i, single_x_weights[i])
+        H_out.add_z_field(i, single_z_weights[i])
+
+        for j in range(i+1, Nqubits):
+            H_out.add_ZZ_term(i, j, interaction_weights[interaction_counter])
+            interaction_counter+=1
+    
+    return H_out
     
 
     

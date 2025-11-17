@@ -136,3 +136,67 @@ def measure_qubit(state, qubit_index, basis='Z', num_shots=1000):
         measurement_basis = [projector0, projector1]
     
     return sample_measurements(state, measurement_basis, num_shots)
+
+
+def get_bitstring_probabilities(final_state, basis='Z'):
+    """
+    Get probabilities for all bitstrings from a quantum state
+    
+    Args:
+        final_state: Quantum state from time evolution
+        basis: Measurement basis ('Z', 'X', 'Y')
+    
+    Returns:
+        Dictionary mapping bitstrings to probabilities
+    """
+    n_qubits = len(final_state.dims[0])
+    probabilities = {}
+    
+    for i in range(2**n_qubits):
+        # Create bitstring in correct order for QuTiP
+        bitstring_bin = format(i, f'0{n_qubits}b') #[::-1]  # Reverse for QuTiP order
+        
+        # Create basis state in measurement basis
+        basis_state = create_basis_state(bitstring_bin, basis)
+        
+        # Calculate probability using Born rule
+        if final_state.type == 'ket':
+            amplitude = basis_state.dag() * final_state
+            if isinstance(amplitude, qt.Qobj):
+                prob = abs(amplitude.full()[0,0]) ** 2
+            else:
+                prob = abs(amplitude) ** 2
+        else:
+            # For density matrices
+            result = basis_state.dag() * final_state * basis_state
+            if isinstance(result, qt.Qobj):
+                prob = result.full()[0,0].real
+            else:
+                prob = result.real
+        
+        probabilities[bitstring_bin] = prob
+    
+    return probabilities
+
+def create_basis_state(bitstring, basis='Z'):
+    """Create basis state in specified measurement basis"""
+    n_qubits = len(bitstring)
+    basis_vectors = []
+    
+    for bit in bitstring:
+        basis_vectors.append(qt.basis(2, int(bit)))
+    
+    basis_state = qt.tensor(basis_vectors)
+    
+    # Apply basis transformation if needed
+    if basis != 'Z':
+        if basis == 'X':
+            H = (1/np.sqrt(2)) * qt.Qobj([[1, 1], [1, -1]])
+            basis_change = qt.tensor([H] * n_qubits)
+            basis_state = basis_change * basis_state
+        elif basis == 'Y':
+            Y = (1/np.sqrt(2)) * qt.Qobj([[1, 1], [1j, -1j]])
+            basis_change = qt.tensor([Y] * n_qubits)
+            basis_state = basis_change * basis_state
+    
+    return basis_state
