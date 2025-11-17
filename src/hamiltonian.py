@@ -94,8 +94,9 @@ def create_random_hamiltonian(Nqubits, min_weight, max_weight):
         for j in range(i+1, Nqubits):
             H_out.add_ZZ_term(i, j, interaction_weights[interaction_counter])
             interaction_counter+=1
-    
-    return H_out
+
+    all_weights = np.concatenate([single_x_weights,single_z_weights,interaction_weights])
+    return H_out, all_weights
     
 
     
