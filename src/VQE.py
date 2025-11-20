@@ -1,11 +1,12 @@
 import sys
 import numpy as np
+import qutip as qt
 
 sys.path.append('/Users/omichel/Desktop/qilimanjaro/projects/retech/retech_2025/src')
 
 import estimator
-import VQE
-
+import hamiltonian
+import dynamics
 
 from qilisdk.backends import QutipBackend
 from qilisdk.digital import Circuit, M, U1, CNOT, U2, U3, CZ, RX, RZ, H
@@ -15,6 +16,11 @@ from qilisdk.functionals.variational_program import VariationalProgram
 from qilisdk.functionals.sampling import Sampling, SamplingResult
 from qilisdk.functionals.time_evolution import TimeEvolution
 from scipy.optimize import minimize
+
+from qilisdk.analog import Schedule, X, Z, Y
+from qilisdk.core import ket, tensor_prod
+from qilisdk.backends import QutipBackend, CudaBackend
+from qilisdk.functionals import TimeEvolution
 
 
 def generate_connectivity_list(size, mode = 'ATA', boundary = 'open'):
@@ -63,12 +69,57 @@ def build_ansatz_circuit(params, nqubits, layers, connectivity):
     return c
 
 
+
+def simulate_annealing(T, dt, Hx, Ht, initial_state):
+    # Build a time‑dependent schedule
+    schedule = Schedule(T, dt)
+    
+    # Add hx with a time‐dependent coefficient function
+    schedule.add_hamiltonian(label="hx", hamiltonian=Hx, schedule = lambda t: 1 - t / T)
+    schedule.add_hamiltonian(label="ht", hamiltonian=Ht.H, schedule = lambda t: t / T)
+    
+    
+    # Create the TimeEvolution functional
+    time_evolution = TimeEvolution(
+        schedule=schedule,
+        initial_state=initial_state,
+        observables=[Z(0), X(0), Y(0)],
+        nshots=0,
+        store_intermediate_results=False,
+    )
+    
+    # Execute on Qutip backend and inspect results
+    backend = QutipBackend()
+    results = backend.execute(time_evolution)
+    return results
+
+
 def fidelity_cost(params, nqubits, layers, connectivity, true_probabilities, backend=QutipBackend):
-    circuit = VQE.build_ansatz_circuit(np.array(params), nqubits, layers, connectivity)
+    circuit = build_ansatz_circuit(np.array(params), nqubits, layers, connectivity)
     circuit_simulation = backend.execute(functional=Sampling(circuit, nshots = 10000))
     loss = 1 - estimator.classical_fidelity(true_probabilities, circuit_simulation.probabilities)
     return float(loss)
 
 
-def nll_cost():
-    pass
+def nll_cost(params, nqubits, psi_0, ti, tf, nsteps, timestamp_measurements):
+    H_ansatz = hamiltonian.create_hamiltonian_from_weights(nqubits, np.array(params), backend='qutip')
+    sim = dynamics.time_evolution(H_ansatz, psi_0, ti, tf, nsteps)
+    loss = estimator.nll(sim.states[-1], timestamp_measurements[0])
+    return float(loss)
+
+
+def annealing_cost(params, times, dt, Hx, nqubits, initial_state, target_state_list):
+
+    Ht = hamiltonian.create_hamiltonian_from_weights(nqubits, params) #target
+    loss = 0
+    for i, T in enumerate(times):
+        sim = simulate_annealing(T, dt, Hx, Ht, initial_state)
+
+        final_state_data = sim.final_state.data
+        final_state_array = final_state_data.toarray()
+        final_qutip_state = qt.Qobj(final_state_array, dims=[[2]*nqubits, [1]])
+
+        loss += (1 - qt.fidelity(target_state_list[i], final_qutip_state))/len(target_state_list)
+
+    return float(loss)
+

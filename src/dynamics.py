@@ -1,6 +1,10 @@
 import qutip as qt
 import numpy as np
 
+sx = qt.sigmax()
+sy = qt.sigmay()
+sz = qt.sigmaz()
+
 def initialize_down_state(size):
 
     '''Initialize product state of all qubits down'''
@@ -92,6 +96,7 @@ def sample_measurements(state, measurement_basis, num_shots=1000):
         outcomes: Array of measurement outcomes (0, 1, 2, ...)
         probabilities: Theoretical probabilities for each outcome
     """
+
     # Calculate probabilities for each measurement outcome
     probabilities = [qt.expect(proj, state) for proj in measurement_basis]
     
@@ -138,6 +143,44 @@ def measure_qubit(state, qubit_index, basis='Z', num_shots=1000):
     return sample_measurements(state, measurement_basis, num_shots)
 
 
+def create_state_from_bitstring(string):
+    state_components = []
+    for bit in string:
+        if bit == '0':
+            state_components.append(qt.basis(2, 0))  # |0⟩
+        else:
+            state_components.append(qt.basis(2, 1))  # |1⟩
+    state = qt.tensor(*state_components)
+    return state
+
+
+def sample_from_state(target_state, nqubits, n_shots):
+    probs   = []
+    states  = []
+    strings = []
+    #loop thorugh all possible bitstrings
+    for i in range(2**nqubits):
+        #create bitstring
+        string = format(i, f'0{nqubits}b')
+        #compute corresponding state
+        state = create_state_from_bitstring(string)
+        #compute outcome probability
+        prob = abs((target_state.dag() * state))**2
+    
+        #save
+        strings.append(string)
+        states.append(state)
+        probs.append(prob)
+
+        #debug
+    #print("strings: ",strings)
+    #print("states: ", states)
+    #print("probs: ", probs)
+    
+    outcomes = np.random.choice(strings, size=n_shots, p=probs)
+
+    return outcomes
+    
 
 
 def get_bitstring_probabilities(final_state, basis='Z'):

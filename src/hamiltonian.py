@@ -12,13 +12,19 @@ class QiliSDKHamiltonian():
     def __init__(self,size):
         self.size = size
         self.H = 0
-    
-    def add_local_field(self, qubit, field, weight=1.):
+
+    def add_x_field(self, qubit, weight=1.):
 
         assert qubit <= self.size-1, f"Index {qubit} out of range. Size of the system is {self.size}"
         
-        self.H += weight*field(qubit)
+        self.H += weight*X(qubit)
 
+    def add_z_field(self, qubit, weight=1.):
+
+        assert qubit <= self.size-1, f"Index {qubit} out of range. Size of the system is {self.size}"
+        
+        self.H += weight*Z(qubit)
+    
     def add_ZZ_term(self, qubit1, qubit2, weight=1.):
 
         assert qubit1<= self.size-1, f"Index {qubit1} out of range. Size of the system is {self.size}"
@@ -26,9 +32,6 @@ class QiliSDKHamiltonian():
         assert qubit1 != qubit2,    f"Qubits 1 and 2 are the same, cannot apply self-interaction term"
 
         self.H += weight*Z(qubit1)*Z(qubit2)
-
-
-
 
 class QutipHamiltonian():
 
@@ -80,13 +83,48 @@ class QutipHamiltonian():
     
 
 
-def create_random_hamiltonian(Nqubits, min_weight, max_weight):
-    H_out = QutipHamiltonian(Nqubits)
+def create_random_hamiltonian(Nqubits, min_weight, max_weight, backend="qutip"):
+
     single_x_weights = np.random.uniform(min_weight, max_weight, size=Nqubits)
     single_z_weights = np.random.uniform(min_weight, max_weight, size=Nqubits)
 
     interaction_weights = np.random.uniform(min_weight, max_weight, size=int(Nqubits*(Nqubits-1)/2))
+
+    all_weights = np.concatenate([single_x_weights,single_z_weights,interaction_weights])
+
     interaction_counter = 0
+
+    if backend == 'qutip':
+        H_out = QutipHamiltonian(Nqubits)
+    
+    elif backend == 'qilisdk':
+        H_out = QiliSDKHamiltonian(Nqubits)
+
+    for i in range(Nqubits):
+        H_out.add_x_field(i, single_x_weights[i])
+        H_out.add_z_field(i, single_z_weights[i])
+
+    for j in range(i+1, Nqubits):
+        H_out.add_ZZ_term(i, j, interaction_weights[interaction_counter])
+        interaction_counter+=1
+
+    return H_out, all_weights
+    
+
+def create_hamiltonian_from_weights(Nqubits, weights, backend='qilisdk'):
+
+    single_x_weights = weights[0:Nqubits]
+    single_z_weights = weights[Nqubits:2*Nqubits]
+    interaction_weights = weights[2*Nqubits:]
+
+    interaction_counter = 0
+
+    if backend == 'qutip':
+        H_out = QutipHamiltonian(Nqubits)
+    
+    elif backend == 'qilisdk':
+        H_out = QiliSDKHamiltonian(Nqubits)
+
     for i in range(Nqubits):
         H_out.add_x_field(i, single_x_weights[i])
         H_out.add_z_field(i, single_z_weights[i])
@@ -95,8 +133,9 @@ def create_random_hamiltonian(Nqubits, min_weight, max_weight):
             H_out.add_ZZ_term(i, j, interaction_weights[interaction_counter])
             interaction_counter+=1
 
-    all_weights = np.concatenate([single_x_weights,single_z_weights,interaction_weights])
-    return H_out, all_weights
-    
+    return H_out
+
+
+
 
     
