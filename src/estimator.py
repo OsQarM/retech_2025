@@ -1,6 +1,7 @@
 import numpy as np
 import qutip as qt
 from typing import List, Tuple
+import dynamics
 
 
 
@@ -14,6 +15,28 @@ def classical_fidelity(prob_dict1, prob_dict2):
     prob_array2 = np.array([prob_dict2.get(key, 0.0) for key in all_keys])
     
     return np.sum(np.sqrt(prob_array1 * prob_array2))
+
+
+def nll(sim_state, measurements, epsilon=1e-12):
+    loss = 0.0
+    
+    for i, m in enumerate(measurements):
+        # Create computational basis state for this measurement
+        state_m = dynamics.create_state_from_bitstring(m)
+        
+        # Compute probability
+        overlap = (state_m.dag() * sim_state)
+        prob = abs(overlap)**2
+        
+        # Avoid log(0) by adding epsilon
+        prob = max(prob, epsilon)
+        
+        loss -= np.log(prob)
+    
+    # Normalize by number of measurements
+    loss = loss / len(measurements)
+    
+    return loss
 
 
 
