@@ -101,10 +101,12 @@ def fidelity_cost(params, nqubits, layers, connectivity, true_probabilities, bac
     return float(loss)
 
 
-def nll_cost(params, nqubits, psi_0, ti, tf, nsteps, timestamp_measurements):
+def nll_cost(params, nqubits, psi_0, ti, tf_list, nsteps, timestamp_measurements):
     H_ansatz = hamiltonian.create_hamiltonian_from_weights(nqubits, np.array(params), backend='qutip')
-    sim = dynamics.time_evolution(H_ansatz, psi_0, ti, tf, nsteps)
-    loss = estimator.nll(sim.states[-1], timestamp_measurements[0])
+    loss = 0
+    for i, time in enumerate(timestamp_measurements):
+        sim = dynamics.time_evolution(H_ansatz, psi_0, ti, tf_list[i], nsteps)
+        loss += estimator.nll(sim.states[-1], timestamp_measurements[i])/len(timestamp_measurements)
     return float(loss)
 
 
