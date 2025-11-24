@@ -59,9 +59,15 @@ def calculate_expectation_values(state_evolution, Hamiltonian):
     magn_t = {}
 
     #calculate expectation value of sz for each spin
-    magn_t["Sx"] = calculate_observable_along_chain(state_evolution, sigma_x_list)
-    magn_t["Sy"] = calculate_observable_along_chain(state_evolution, sigma_y_list)
-    magn_t["Sz"] = calculate_observable_along_chain(state_evolution, sigma_z_list)
+
+    if type(state_evolution) != list:
+        states = state_evolution.states
+    else:
+        states = state_evolution
+
+    magn_t["Sx"] = calculate_observable_along_chain(states, sigma_x_list)
+    magn_t["Sy"] = calculate_observable_along_chain(states, sigma_y_list)
+    magn_t["Sz"] = calculate_observable_along_chain(states, sigma_z_list)
 
     return magn_t
 
@@ -79,7 +85,7 @@ def calculate_observable_along_chain(state_evolution, observable):
     """
     return np.array([[qt.expect(op, state) 
                         for op in observable] 
-                       for state in state_evolution.states])
+                       for state in state_evolution])
 
 
 
@@ -143,18 +149,29 @@ def measure_qubit(state, qubit_index, basis='Z', num_shots=1000):
     return sample_measurements(state, measurement_basis, num_shots)
 
 
-def create_state_from_bitstring(string):
+def create_state_from_bitstring(string, basis='z'):
     state_components = []
     for bit in string:
         if bit == '0':
-            state_components.append(qt.basis(2, 0))  # |0⟩
+            if basis == 'z':
+                state_components.append(qt.basis(2, 0))  # |0⟩
+            elif basis == 'x':
+                state_components.append((qt.basis(2, 0) + qt.basis(2, 1)).unit()) # |+>
+            else:
+                raise ValueError("Basis defined incorrectly, pass either 'z' or 'x'.")
         else:
-            state_components.append(qt.basis(2, 1))  # |1⟩
+            if basis == 'z':    
+                state_components.append(qt.basis(2, 1))  # |1⟩
+            elif basis == 'x':
+                state_components.append((qt.basis(2, 0) - qt.basis(2, 1)).unit()) # |->
+            else:
+                raise ValueError("Basis defined incorrectly, pass either 'z' or 'x'.")
+            
     state = qt.tensor(*state_components)
     return state
 
 
-def sample_from_state(target_state, nqubits, n_shots):
+def sample_from_state(target_state, nqubits, n_shots, basis='z'):
     probs   = []
     states  = []
     strings = []
@@ -163,7 +180,7 @@ def sample_from_state(target_state, nqubits, n_shots):
         #create bitstring
         string = format(i, f'0{nqubits}b')
         #compute corresponding state
-        state = create_state_from_bitstring(string)
+        state = create_state_from_bitstring(string, basis)
         #compute outcome probability
         prob = abs((target_state.dag() * state))**2
     

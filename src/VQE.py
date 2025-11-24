@@ -106,7 +106,8 @@ def nll_cost(params, nqubits, psi_0, ti, tf_list, nsteps, timestamp_measurements
     loss = 0
     for i, time in enumerate(timestamp_measurements):
         sim = dynamics.time_evolution(H_ansatz, psi_0, ti, tf_list[i], nsteps)
-        loss += estimator.nll(sim.states[-1], timestamp_measurements[i])/len(timestamp_measurements)
+        loss += estimator.nll(sim.states[-1], timestamp_measurements[i][0], basis='z')/len(timestamp_measurements)
+        loss += estimator.nll(sim.states[-1], timestamp_measurements[i][1], basis='x')/len(timestamp_measurements)
     return float(loss)
 
 
@@ -121,7 +122,6 @@ def annealing_cost(params, times, dt, Hx, nqubits, initial_state, target_state_l
         final_state_array = final_state_data.toarray()
         final_qutip_state = qt.Qobj(final_state_array, dims=[[2]*nqubits, [1]])
 
-        loss += (1 - qt.fidelity(target_state_list[i], final_qutip_state))/len(target_state_list)
-
+        loss += (1 - qt.fidelity(target_state_list[i], final_qutip_state))# /len(target_state_list)
     return float(loss)
 
