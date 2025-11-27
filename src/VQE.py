@@ -23,6 +23,8 @@ from qilisdk.backends import QutipBackend, CudaBackend
 from qilisdk.functionals import TimeEvolution
 
 
+
+
 def generate_connectivity_list(size, mode = 'ATA', boundary = 'open'):
     connectivity = []
     if mode == 'ATA':
@@ -100,17 +102,6 @@ def fidelity_cost(params, nqubits, layers, connectivity, true_probabilities, bac
     loss = 1 - estimator.classical_fidelity(true_probabilities, circuit_simulation.probabilities)
     return float(loss)
 
-
-def nll_cost(params, nqubits, psi_0, ti, tf_list, nsteps, timestamp_measurements):
-    H_ansatz = hamiltonian.create_hamiltonian_from_weights(nqubits, np.array(params), backend='qutip')
-    loss = 0
-    for i, time in enumerate(timestamp_measurements):
-        sim = dynamics.time_evolution(H_ansatz, psi_0, ti, tf_list[i], nsteps)
-        loss += estimator.nll(sim.states[-1], timestamp_measurements[i][0], basis='z')/len(timestamp_measurements)
-        loss += estimator.nll(sim.states[-1], timestamp_measurements[i][1], basis='x')/len(timestamp_measurements)
-    return float(loss)
-
-
 def annealing_cost(params, times, dt, Hx, nqubits, initial_state, target_state_list):
 
     Ht = hamiltonian.create_hamiltonian_from_weights(nqubits, params) #target
@@ -124,4 +115,35 @@ def annealing_cost(params, times, dt, Hx, nqubits, initial_state, target_state_l
 
         loss += (1 - qt.fidelity(target_state_list[i], final_qutip_state))# /len(target_state_list)
     return float(loss)
+
+
+def nll_cost(params, nqubits, psi_0, ti, tf_list, nsteps, timestamp_measurements):
+    H_ansatz = hamiltonian.create_hamiltonian_from_weights(nqubits, np.array(params), backend='qutip')
+    loss = 0
+    for i, time in enumerate(timestamp_measurements):
+        sim = dynamics.time_evolution(H_ansatz, psi_0, ti, tf_list[i], nsteps)
+        loss += estimator.nll(sim.states[-1], timestamp_measurements[i][0], basis='z')/len(timestamp_measurements)
+        loss += estimator.nll(sim.states[-1], timestamp_measurements[i][1], basis='x')/len(timestamp_measurements)
+    return float(loss)
+
+def inverse_nll_cost(params, nqubits, psi_0, ti, tf_list, nsteps, nshots, target_states):
+    #build ansatz H from variational parameters
+    H_ansatz = hamiltonian.create_hamiltonian_from_weights(nqubits, np.array(params), backend='qutip')
+    loss = 0
+    for i, state in enumerate(target_states):
+        #simulate dynamics
+        sim = dynamics.time_evolution(H_ansatz, psi_0, ti, tf_list[i], nsteps)
+        #sampling
+        measurements_z = dynamics.sample_from_state(sim.states[-1], nqubits, nshots, basis='z')
+        measurements_x = dynamics.sample_from_state(sim.states[-1], nqubits, nshots, basis='x')
+        #loss calculation
+        loss += estimator.nll(state, measurements_z, basis='z')/len(target_states)
+        loss += estimator.nll(state, measurements_x, basis='x')/len(target_states)
+    print(loss)    
+    return float(loss)
+
+
+
+
+
 
