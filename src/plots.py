@@ -62,3 +62,83 @@ def plot_expectations(z_data, N, filepath=None):
 
     plt.show()
     return
+
+
+
+# Quick plot if you just want to see the comparison
+def plot_weights(target, initial, final):
+    """Quick bar plot for weight comparison"""
+    x = np.arange(len(target))
+    width = 0.25
+    
+    plt.figure(figsize=(10, 5))
+    plt.bar(x - width, target, width, label='Target', alpha=0.7)
+    plt.bar(x, initial, width, label='Initial', alpha=0.7)
+    plt.bar(x + width, final, width, label='Final', alpha=0.7)
+    
+    plt.xlabel('Parameters')
+    plt.ylabel('Values')
+    plt.title('Weights Comparison')
+    plt.legend()
+    plt.grid(True, alpha=0.3)
+    plt.show()
+
+
+
+def plot_2_expectations(z_list, x_list, z_list_2, x_list_2):
+    # Create side-by-side subplots
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 5))
+
+    # Left plot: z lists
+    ax1.plot(z_list, 'b-', label='z_list', linewidth=2)
+    ax1.plot(z_list_2, 'r--', label='z_list_2', linewidth=2)
+    ax1.set_title('Z Lists')
+    ax1.legend()
+    ax1.grid(True, alpha=0.3)
+    ax1.set_ylim(-1,1)
+    # Right plot: x lists  
+    ax2.plot(x_list, 'g-', label='x_list', linewidth=2)
+    ax2.plot(x_list_2, 'm--', label='x_list_2', linewidth=2)
+    ax2.set_title('X Lists')
+    ax2.legend()
+    ax2.grid(True, alpha=0.3)
+
+    plt.tight_layout()
+    plt.show()
+
+
+def plot_4_expectations(z_list, x_list, z_list_2, x_list_2, z_list_3, x_list_3, z_list_4, x_list_4):
+    # Create side-by-side subplots
+    fig, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2, figsize=(12, 12))
+
+    # Left plot: z lists
+    ax1.plot(z_list, 'b-', label='z_list', linewidth=2)
+    ax1.plot(z_list_3, 'r--', label='z_list_2', linewidth=2)
+    ax1.set_title('Z Lists')
+    ax1.legend()
+    ax1.grid(True, alpha=0.3)
+    ax1.set_ylim(-1,1)
+    # Right plot: x lists  
+    ax2.plot(x_list, 'g-', label='x_list', linewidth=2)
+    ax2.plot(x_list_3, 'm--', label='x_list_2', linewidth=2)
+    ax2.set_title('X Lists')
+    ax2.legend()
+    ax2.grid(True, alpha=0.3)
+    ax2.set_ylim(-1,1)
+
+    # Left plot: z lists
+    ax3.plot(z_list_2, 'b-', label='z_list', linewidth=2)
+    ax3.plot(z_list_4, 'r--', label='z_list_2', linewidth=2)
+    ax3.set_title('Z Lists')
+    ax3.legend()
+    ax3.grid(True, alpha=0.3)
+    ax3.set_ylim(-1,1)
+    # Right plot: x lists  
+    ax4.plot(x_list_2, 'g-', label='x_list', linewidth=2)
+    ax4.plot(x_list_4, 'm--', label='x_list_2', linewidth=2)
+    ax4.set_title('X Lists')
+    ax4.legend()
+    ax4.grid(True, alpha=0.3)
+    ax4.set_ylim(-1,1)
+    plt.tight_layout()
+    plt.show()
