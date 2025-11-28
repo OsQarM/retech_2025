@@ -1,6 +1,7 @@
 import sys
 import numpy as np
 import qutip as qt
+from scipy.optimize import minimize
 
 sys.path.append('/Users/omichel/Desktop/qilimanjaro/projects/retech/retech_2025/src')
 
@@ -71,15 +72,15 @@ def build_ansatz_circuit(params, nqubits, layers, connectivity):
     return c
 
 
-
-def simulate_annealing(T, dt, Hx, Ht, initial_state):
+def simulate_annealing(T, dt, steps, Hx, Ht, initial_state):
     # Build a time‑dependent schedule
-    schedule = Schedule(T, dt)
-    
-    # Add hx with a time‐dependent coefficient function
-    schedule.add_hamiltonian(label="hx", hamiltonian=Hx, schedule = lambda t: 1 - t / T)
-    schedule.add_hamiltonian(label="ht", hamiltonian=Ht.H, schedule = lambda t: t / T)
-    
+
+    schedule = Schedule(
+        T=T,
+        dt=dt,
+        hamiltonians={"driver": Hx, "problem": Ht},
+        schedule={i: {"driver": 1 - t / T, "problem": t / T} for i, t in enumerate(steps)},
+    )
     
     # Create the TimeEvolution functional
     time_evolution = TimeEvolution(
@@ -102,12 +103,44 @@ def fidelity_cost(params, nqubits, layers, connectivity, true_probabilities, bac
     loss = 1 - estimator.classical_fidelity(true_probabilities, circuit_simulation.probabilities)
     return float(loss)
 
-def annealing_cost(params, times, dt, Hx, nqubits, initial_state, target_state_list):
+
+def learn_hamiltonian(nqubits, weights_i, H_driver, initial_state, target_states, times, optimizer_options = None, mode = "complete"):
+    if mode == "complete":
+        result = minimize_cost(nqubits, weights_i, H_driver, initial_state, target_states, times, optimizer_options)
+
+    elif mode == "segmented":
+        print("Initial weights:", weights_i)
+        for i,t in enumerate(times):
+            tf = [t]
+            target_state = [target_states[i]]
+            result = minimize_cost(nqubits, weights_i, H_driver, initial_state, target_state, tf, optimizer_options)
+            weights_i = result.x
+            print("Updated weights:", weights_i)
+
+    return result
+
+
+def minimize_cost(nqubits, initial_weights, H_driver, initial_state, target_states, times, optimizer_options):
+    res = minimize(
+    fun=lambda p: annealing_cost(p, times, H_driver, nqubits, initial_state, target_states),
+    x0=initial_weights,
+    method='L-BFGS-B',
+    jac=lambda p: estimator.parameter_shift_grad(
+        lambda x: annealing_cost(x, times, H_driver, nqubits, initial_state, target_states),
+        p
+    ),
+    options=optimizer_options
+)
+    return res
+
+def annealing_cost(params, times, Hx, nqubits, initial_state, target_state_list):
 
     Ht = hamiltonian.create_hamiltonian_from_weights(nqubits, params) #target
     loss = 0
     for i, T in enumerate(times):
-        sim = simulate_annealing(T, dt, Hx, Ht, initial_state)
+        dt = T/100
+        steps = np.linspace(0, T, int(T / dt))
+        sim = simulate_annealing(T, dt, steps, Hx, Ht.H, initial_state)
 
         final_state_data = sim.final_state.data
         final_state_array = final_state_data.toarray()

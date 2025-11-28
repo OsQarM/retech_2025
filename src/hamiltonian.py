@@ -104,9 +104,9 @@ def create_random_hamiltonian(Nqubits, min_weight, max_weight, backend="qutip"):
         H_out.add_x_field(i, single_x_weights[i])
         H_out.add_z_field(i, single_z_weights[i])
 
-    for j in range(i+1, Nqubits):
-        H_out.add_ZZ_term(i, j, interaction_weights[interaction_counter])
-        interaction_counter+=1
+        for j in range(i+1, Nqubits):
+            H_out.add_ZZ_term(i, j, interaction_weights[interaction_counter])
+            interaction_counter+=1
 
     return H_out, all_weights
     
