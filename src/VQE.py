@@ -104,39 +104,42 @@ def fidelity_cost(params, nqubits, layers, connectivity, true_probabilities, bac
     return float(loss)
 
 
-def learn_hamiltonian(nqubits, weights_i, H_driver, initial_state, target_states, times, optimizer_options = None, mode = "complete"):
+def learn_hamiltonian(nqubits, weights_i, H_driver, initial_state, target_states, times, alpha = 1., observables = None, optimizer_options = None, mode = "complete"):
     if mode == "complete":
-        result = minimize_cost(nqubits, weights_i, H_driver, initial_state, target_states, times, optimizer_options)
+        result = minimize_cost(nqubits, weights_i, H_driver, initial_state, target_states, times, alpha, observables, optimizer_options)
 
     elif mode == "segmented":
-        print("Initial weights:", weights_i)
         for i,t in enumerate(times):
             tf = [t]
             target_state = [target_states[i]]
-            result = minimize_cost(nqubits, weights_i, H_driver, initial_state, target_state, tf, optimizer_options)
+            result = minimize_cost(nqubits, weights_i, H_driver, initial_state, target_state, tf, alpha, observables, optimizer_options)
             weights_i = result.x
-            print("Updated weights:", weights_i)
 
     return result
 
 
-def minimize_cost(nqubits, initial_weights, H_driver, initial_state, target_states, times, optimizer_options):
+def minimize_cost(nqubits, initial_weights, H_driver, initial_state, target_states, times, alpha, observables, optimizer_options):
     res = minimize(
-    fun=lambda p: annealing_cost(p, times, H_driver, nqubits, initial_state, target_states),
+    fun=lambda p: annealing_cost(p, times, H_driver, nqubits, initial_state, target_states, alpha, observables),
     x0=initial_weights,
     method='L-BFGS-B',
     jac=lambda p: estimator.parameter_shift_grad(
-        lambda x: annealing_cost(x, times, H_driver, nqubits, initial_state, target_states),
+        lambda x: annealing_cost(x, times, H_driver, nqubits, initial_state, target_states, alpha, observables),
         p
     ),
     options=optimizer_options
 )
     return res
 
-def annealing_cost(params, times, Hx, nqubits, initial_state, target_state_list):
+def annealing_cost(params, times, Hx, nqubits, initial_state, target_state_list, alpha, target_observables):
 
     Ht = hamiltonian.create_hamiltonian_from_weights(nqubits, params) #target
     loss = 0
+
+    target_x = target_observables[0]
+    target_y = target_observables[1]
+    target_z = target_observables[2]
+
     for i, T in enumerate(times):
         dt = T/100
         steps = np.linspace(0, T, int(T / dt))
@@ -146,7 +149,18 @@ def annealing_cost(params, times, Hx, nqubits, initial_state, target_state_list)
         final_state_array = final_state_data.toarray()
         final_qutip_state = qt.Qobj(final_state_array, dims=[[2]*nqubits, [1]])
 
-        loss += (1 - qt.fidelity(target_state_list[i], final_qutip_state))# /len(target_state_list)
+        final_x = sim.final_expected_values[0]
+        final_y = sim.final_expected_values[1]
+        final_z = sim.final_expected_values[2]
+
+        fidelity_loss = 1 - qt.fidelity(target_state_list[i], final_qutip_state)
+        observable_loss = (abs((final_x - target_x[i])) +
+                           abs((final_y - target_y[i])) +
+                           abs((final_z - target_z[i]))
+                           )/3.0 
+
+        # divide by 2 because it can take a maximum of 2
+        loss += alpha*fidelity_loss + (1-alpha)*observable_loss
     return float(loss)
 
 
@@ -163,6 +177,7 @@ def inverse_nll_cost(params, nqubits, psi_0, ti, tf_list, nsteps, nshots, target
     #build ansatz H from variational parameters
     H_ansatz = hamiltonian.create_hamiltonian_from_weights(nqubits, np.array(params), backend='qutip')
     loss = 0
+
     for i, state in enumerate(target_states):
         #simulate dynamics
         sim = dynamics.time_evolution(H_ansatz, psi_0, ti, tf_list[i], nsteps)
@@ -172,7 +187,6 @@ def inverse_nll_cost(params, nqubits, psi_0, ti, tf_list, nsteps, nshots, target
         #loss calculation
         loss += estimator.nll(state, measurements_z, basis='z')/len(target_states)
         loss += estimator.nll(state, measurements_x, basis='x')/len(target_states)
-    print(loss)    
     return float(loss)
 
 
