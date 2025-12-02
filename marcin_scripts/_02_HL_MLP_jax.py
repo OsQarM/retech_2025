@@ -93,7 +93,7 @@ CONFIG = {
     # ====================================================================
     "print_every": 10,            # Logging frequency (in epochs).
 
-    # Curriculum Phases (Fractions must sum to 1.0):
+    # Curriculum Phases (Fractions must sum to 1.0): they don't in this example
     "PHASE1_SPLIT": 0.4,         # Phase 1 (Warm-up): Train BOTH (θ + NN). Finds the general solution region.
     "PHASE2_SPLIT": 0.4,         # Phase 2 (Distillation): Freeze NN, Train θ. Forces the interpretable 
                                   # Ansatz to absorb the dynamics learned by the NN.
@@ -185,13 +185,16 @@ def relative_absolute_error(theta_true: Array, theta_learned: Array) -> float:
     return error_abs / jnp.where(true_norm > 1e-12, true_norm, 1.0)
 
 def make_observables(L):
+    '''
+    Build Single and 2-qubit observables and fuction that applies them to every state in the trajectory
+    '''
     sx, sy, sz, id2 = paulis()
     obs = {}
     for name, op in zip(['X_0', 'Y_0', 'Z_0'], [sx, sy, sz]):
-        ops = [op] + [id2]*(L-1)
+        ops = [op] + [id2]*(L-1) #building it only for qubit 1?
         obs[name] = kron_n(ops) 
     if L >= 2:
-        obs['X_0 X_1'] = kron_n([sx, sx] + [id2]*(L-2))
+        obs['X_0 X_1'] = kron_n([sx, sx] + [id2]*(L-2)) # only for 1-2 interaction?
         obs['Y_0 Y_1'] = kron_n([sy, sy] + [id2]*(L-2))
         obs['Z_0 Z_1'] = kron_n([sz, sz] + [id2]*(L-2))
 
