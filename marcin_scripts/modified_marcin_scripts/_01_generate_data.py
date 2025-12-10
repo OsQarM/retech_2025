@@ -34,7 +34,7 @@ CONFIG = {
     "system_type": "open",       # "closed" or "open"
     "noise_types": ["dephasing"],  # ["thermal", "dephasing"] or []
     "gamma_thermal": 0.05,       # Thermal relaxation rate
-    "gamma_dephasing": 0.03,     # Dephasing rate
+    "gamma_dephasing": 0.03,     # Dephasing rates
     
     # TRUE HAMILTONIAN PARAMETERS (Non-Homogeneous)
     # For L=6: 5 bonds for J, 6 sites for h

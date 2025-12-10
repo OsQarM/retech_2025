@@ -34,8 +34,8 @@ CONFIG = {
     
     # NEW: CHOICE OF DYNAMICS AND NOISE PARAMETERS
     "dynamics_type": "lindblad",  # Options: "schrodinger" or "lindblad"
-    "T1": 20.0,                   # T1 decay time (inverse of decay rate)
-    "T2": 10.0,                    # T2 dephasing time (inverse of dephasing rate)
+    "T1": 10000.0,                   # T1 decay time (inverse of decay rate)
+    "T2": 5000.0,                    # T2 dephasing time (inverse of dephasing rate)
 }
 
 # ============================================================
