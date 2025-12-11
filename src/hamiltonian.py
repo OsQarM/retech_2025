@@ -83,12 +83,21 @@ class QutipHamiltonian():
     
 
 
-def create_random_hamiltonian(Nqubits, min_weight, max_weight, backend="qutip"):
+def create_random_hamiltonian(Nqubits, min_weight, max_weight, connectivity ="all-to-all", backend="qutip"):
+
+    if connectivity not in ["all-to-all", "nearest-neighbours"]:
+        raise ValueError(
+    f"Connectivity must be 'all-to-all' or 'nearest-neighbours', got '{connectivity}'"
+    )  
 
     single_x_weights = np.random.uniform(min_weight, max_weight, size=Nqubits)
     single_z_weights = np.random.uniform(min_weight, max_weight, size=Nqubits)
 
-    interaction_weights = np.random.uniform(min_weight, max_weight, size=int(Nqubits*(Nqubits-1)/2))
+    if connectivity == "all-to-all":
+        interaction_weights = np.random.uniform(min_weight, max_weight, size=int(Nqubits*(Nqubits-1)/2))
+
+    elif connectivity == "nearest-neighbours":
+        interaction_weights = np.random.uniform(min_weight, max_weight, size=int(Nqubits -1))
 
     all_weights = np.concatenate([single_x_weights,single_z_weights,interaction_weights])
 
@@ -104,14 +113,25 @@ def create_random_hamiltonian(Nqubits, min_weight, max_weight, backend="qutip"):
         H_out.add_x_field(i, single_x_weights[i])
         H_out.add_z_field(i, single_z_weights[i])
 
-        for j in range(i+1, Nqubits):
-            H_out.add_ZZ_term(i, j, interaction_weights[interaction_counter])
-            interaction_counter+=1
+        if connectivity == "all-to-all":
+            for j in range(i+1, Nqubits):
+                H_out.add_ZZ_term(i, j, interaction_weights[interaction_counter])
+                interaction_counter+=1
+
+    if connectivity == "nearest-neighbours":
+        for i in range(Nqubits - 1):
+            H_out.add_ZZ_term(i, i+1, interaction_weights[i])
+
 
     return H_out, all_weights
     
 
-def create_hamiltonian_from_weights(Nqubits, weights, backend='qilisdk'):
+def create_hamiltonian_from_weights(Nqubits, weights, connectivity = "all-to-all", backend='qilisdk'):
+
+    if connectivity not in ["all-to-all", "nearest-neighbours"]:
+        raise ValueError(
+    f"Connectivity must be 'all-to-all' or 'nearest-neighbours', got '{connectivity}'"
+    )   
 
     single_x_weights = weights[0:Nqubits]
     single_z_weights = weights[Nqubits:2*Nqubits]
@@ -129,9 +149,14 @@ def create_hamiltonian_from_weights(Nqubits, weights, backend='qilisdk'):
         H_out.add_x_field(i, single_x_weights[i])
         H_out.add_z_field(i, single_z_weights[i])
 
-        for j in range(i+1, Nqubits):
-            H_out.add_ZZ_term(i, j, interaction_weights[interaction_counter])
-            interaction_counter+=1
+        if connectivity == "all-to-all":
+            for j in range(i+1, Nqubits):
+                H_out.add_ZZ_term(i, j, interaction_weights[interaction_counter])
+                interaction_counter+=1
+
+    if connectivity == "nearest-neighbours":
+        for i in range(Nqubits - 1):
+            H_out.add_ZZ_term(i, i+1, interaction_weights[i])
 
     return H_out
 

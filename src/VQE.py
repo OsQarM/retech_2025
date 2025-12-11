@@ -103,36 +103,36 @@ def fidelity_cost(params, nqubits, layers, connectivity, true_probabilities, bac
     return float(loss)
 
 
-def learn_hamiltonian(nqubits, weights_i, H_driver, initial_state, target_states, times, alpha = 1., observables = None, optimizer_options = None, mode = "complete"):
+def learn_hamiltonian(nqubits, weights_i, H_driver, initial_state, target_states, times, connectivity = "all-to-all", alpha = 1., observables = None, optimizer_options = None, mode = "complete"):
     if mode == "complete":
-        result = minimize_cost(nqubits, weights_i, H_driver, initial_state, target_states, times, alpha, observables, optimizer_options)
+        result = minimize_cost(nqubits, weights_i, H_driver, initial_state, target_states, times, connectivity, alpha, observables, optimizer_options)
 
     elif mode == "segmented":
         for i,t in enumerate(times):
             tf = [t]
             target_state = [target_states[i]]
-            result = minimize_cost(nqubits, weights_i, H_driver, initial_state, target_state, tf, alpha, observables, optimizer_options)
+            result = minimize_cost(nqubits, weights_i, H_driver, initial_state, target_state, tf, alpha, observables, optimizer_options, connectivity)
             weights_i = result.x
 
     return result
 
 
-def minimize_cost(nqubits, initial_weights, H_driver, initial_state, target_states, times, alpha, observables, optimizer_options):
+def minimize_cost(nqubits, initial_weights, H_driver, initial_state, target_states, times, alpha, observables, optimizer_options, connectivity = 'all-to-all'):
     res = minimize(
-    fun=lambda p: annealing_cost(p, times, H_driver, nqubits, initial_state, target_states, alpha, observables),
+    fun=lambda p: annealing_cost(p, times, H_driver, nqubits, initial_state, target_states, alpha, observables, connectivity),
     x0=initial_weights,
     method='L-BFGS-B',
     jac=lambda p: estimator.parameter_shift_grad(
-        lambda x: annealing_cost(x, times, H_driver, nqubits, initial_state, target_states, alpha, observables),
+        lambda x: annealing_cost(x, times, H_driver, nqubits, initial_state, target_states, alpha, observables, connectivity),
         p
     ),
     options=optimizer_options
 )
     return res
 
-def annealing_cost(params, times, Hx, nqubits, initial_state, target_state_list, alpha, target_observables):
+def annealing_cost(params, times, Hx, nqubits, initial_state, target_state_list, alpha, target_observables, connectivity = 'all-to-all'):
 
-    Ht = hamiltonian.create_hamiltonian_from_weights(nqubits, params) #target
+    Ht = hamiltonian.create_hamiltonian_from_weights(nqubits, params, connectivity) #target
     loss = 0
 
     target_x = target_observables[0]
