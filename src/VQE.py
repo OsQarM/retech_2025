@@ -72,14 +72,13 @@ def build_ansatz_circuit(params, nqubits, layers, connectivity):
     return c
 
 
-def simulate_annealing(T, dt, steps, Hx, Ht, initial_state):
+def simulate_annealing(T, dt, tf, steps, Hx, Ht, initial_state):
     # Build a time‑dependent schedule
-
     schedule = Schedule(
         T=T,
         dt=dt,
         hamiltonians={"driver": Hx, "problem": Ht},
-        schedule={i: {"driver": 1 - t / T, "problem": t / T} for i, t in enumerate(steps)},
+        schedule={i: {"driver": 1 - t /tf, "problem": t /tf} for i, t in enumerate(steps)},
     )
     
     # Create the TimeEvolution functional
@@ -139,11 +138,12 @@ def annealing_cost(params, times, Hx, nqubits, initial_state, target_state_list,
     target_x = target_observables[0]
     target_y = target_observables[1]
     target_z = target_observables[2]
-
+    #final time of annealing schedule where H = Hp (sometimes we want to simulate only part of the annealing)
+    T_final = times[-1]
     for i, T in enumerate(times):
         dt = T/100
         steps = np.linspace(0, T, int(T / dt))
-        sim = simulate_annealing(T, dt, steps, Hx, Ht.H, initial_state)
+        sim = simulate_annealing(T, dt, T_final, steps, Hx, Ht.H, initial_state)
 
         final_state_data = sim.final_state.data
         final_state_array = final_state_data.toarray()
