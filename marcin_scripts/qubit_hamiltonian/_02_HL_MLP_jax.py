@@ -27,7 +27,7 @@ CONFIG = {
     # ====================================================================
     # 1. EXPERIMENT TARGET SELECTION & DEFINITION
     # ====================================================================
-    "L": 6,                       # System Size 
+    "L": 5,                       # System Size 
                                    
 
     "t_max": 1.0,                 # Experiment Duration
