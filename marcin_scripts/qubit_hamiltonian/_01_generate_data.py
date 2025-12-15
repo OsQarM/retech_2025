@@ -21,11 +21,11 @@ Array = jnp.ndarray
 # ============================================================
 CONFIG = {
     # SYSTEM DEFINITION & DATA SAMPLING PARAMETERS
-    "L": 5,                      # Number of qubits (N spins).
+    "L": 6,                      # Number of qubits (N spins).
     "t_max": 1.0,                # Total time evolution (in units of ħ).
     "dt": 0.01,                  # RK4 Integration time step.
     "N_time_shots": 101,         # Number of discrete measurement points (J).
-    "N_shots_per_time": 500,     # Number of shots taken at each discrete measurement time (R).
+    "N_shots_per_time": 5000,     # Number of shots taken at each discrete measurement time (R).
     "initial_state_kind": "all_plus", 
     "seed_data": 1234,           
     
@@ -45,9 +45,9 @@ CONFIG = {
     "Jzz_list_true": [0.4, 0.25, 0.1, 0.9, 0.2],       # ZZ coupling for each bond (L-1 values)
     
     # NEW: CHOICE OF DYNAMICS AND NOISE PARAMETERS
-    "dynamics_type": "schrodinger",  # Options: "schrodinger" or "lindblad"
-    "T1": 10000.0,                   # T1 decay time (inverse of decay rate) - FIXED DEFAULT
-    "T2": 10.0,                    # T2 dephasing time (inverse of dephasing rate) - FIXED DEFAULT
+    "dynamics_type": "lindblad",  # Options: "schrodinger" or "lindblad"
+    "T1": 10.0,                   # T1 decay time (inverse of decay rate) - FIXED DEFAULT
+    "T2": 5.0,                    # T2 dephasing time (inverse of dephasing rate) - FIXED DEFAULT
 }
 
 # ============================================================

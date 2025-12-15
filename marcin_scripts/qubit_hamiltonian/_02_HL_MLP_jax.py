@@ -27,7 +27,7 @@ CONFIG = {
     # ====================================================================
     # 1. EXPERIMENT TARGET SELECTION & DEFINITION
     # ====================================================================
-    "L": 5,                       # System Size 
+    "L": 6,                       # System Size 
                                    
 
     "t_max": 1.0,                 # Experiment Duration
@@ -331,21 +331,33 @@ def make_observables(L):
     
     return obs, calculate_observables
 
+
+#####################################################################################
+#####################################################################################
+#####################################################################################
+#####################################################################################
+#####################################################################################
+#####################################################################################
+
 # ============================================================
 # 2. NDE LOGIC
 # ============================================================
+
+def mlp_forward(params, x):
+    '''Makes forward step of NN with specific activation function'''
+    h = x
+    for layer in params[:-1]: h = jnp.tanh(h @ layer["W"] + layer["b"])
+    last = params[-1]
+    return h @ last["W"] + last["b"]
+
+
 def init_mlp_params(layer_sizes, key, scale=0.1):
+    '''Initialize NN parameters randomly given the sizes of input and output '''
     params = []; keys = random.split(key, len(layer_sizes)-1)
     for k, (m,n) in zip(keys, zip(layer_sizes[:-1], layer_sizes[1:])):
         W = scale * random.normal(k, (m,n)); b = jnp.zeros((n,))
         params.append({"W": W, "b": b})
     return params
-
-def mlp_forward(params, x):
-    h = x
-    for layer in params[:-1]: h = jnp.tanh(h @ layer["W"] + layer["b"])
-    last = params[-1]
-    return h @ last["W"] + last["b"]
 
 def get_nn_coeffs_from_params(nn_params, t, NN_MAP_FUN):
     t_input = jnp.array([[t]]); return NN_MAP_FUN(nn_params, t_input)[0] 
@@ -356,8 +368,10 @@ def get_nn_state_dependent_correction(nn_params, psi, NN_MAP_FUN, dim):
     return NN_out_2D[:dim] + 1j * NN_out_2D[dim:]
 
 def make_rhs_fun(L, OPS_XYZ, NN_MAP_FUN, NN_MODEL_TYPE, MODEL_TYPE, hamiltonian_type):
+    '''Return function for rhs of NN equation'''
     dim = 2**L
     def H_phys(params):
+        '''Builds H from parameters'''
         if MODEL_TYPE == "white": 
             return xyz_hamiltonian_from_theta(L, params["theta"], OPS_XYZ, hamiltonian_type)
         else: 
@@ -368,7 +382,9 @@ def make_rhs_fun(L, OPS_XYZ, NN_MAP_FUN, NN_MODEL_TYPE, MODEL_TYPE, hamiltonian_
         return sum(coeffs[k] * OPS_XYZ[k] for k in range(len(OPS_XYZ)))
         
     def rhs_ode(t: float, psi: Array, params: dict):
-        H_A = H_phys(params); phys_term = -1j * (H_A @ psi)
+        '''Gives ODE from NN parameters'''
+        H_A = H_phys(params); phys_term = -1j * (H_A @ psi) #physical term
+        #NN correction term
         if NN_MODEL_TYPE == "time_dependent":
             H_corr = H_NN_time_dependent(params["nn"], t)
             return phys_term - 1j * (H_corr @ psi)
@@ -377,6 +393,17 @@ def make_rhs_fun(L, OPS_XYZ, NN_MAP_FUN, NN_MODEL_TYPE, MODEL_TYPE, hamiltonian_
             return phys_term + corr_term
         return phys_term
     return rhs_ode
+
+
+
+
+
+#####################################################################################
+#####################################################################################
+#####################################################################################
+#####################################################################################
+#####################################################################################
+#####################################################################################
 
 def rk4_step(psi, t, dt, rhs_fun, params):
     dt_c = jnp.asarray(dt, dtype=psi.dtype)
@@ -410,6 +437,7 @@ def evolve_trajectory(psi0, t_grid, rhs_fun, params):
 # 3. LOSS AND DATA LOADING
 # ============================================================
 def nde_loss(params, L, OPS_XYZ, NN_MAP_FUN, NN_MODEL_TYPE, MODEL_TYPE, hamiltonian_type, lambda_reg, t_grid_shots, psi0, counts_shots):
+    '''Evolves differential equation with given parameters outputed from the NN and calculates the loss function'''
     rhs_fun = make_rhs_fun(L, OPS_XYZ, NN_MAP_FUN, NN_MODEL_TYPE, MODEL_TYPE, hamiltonian_type)
     psi_traj_shots = evolve_trajectory(psi0, t_grid_shots, rhs_fun, params)
     ll = log_likelihood_trajectory(psi_traj_shots, counts_shots)
@@ -507,6 +535,16 @@ def load_experimental_data(config):
         
     except Exception as e:
         raise RuntimeError(f"Error loading data: {e}")
+    
+
+
+ 
+#####################################################################################
+#####################################################################################
+#####################################################################################
+#####################################################################################
+#####################################################################################
+#####################################################################################   
 
 # ============================================================
 # 4. TRAINING HELPERS
@@ -582,6 +620,15 @@ def train_phase(params_init, N_epochs, config, OPS_XYZ, NN_MAP_FUN, NN_MODEL_TYP
     return params, losses
 
 
+
+#####################################################################################
+#####################################################################################
+#####################################################################################
+#####################################################################################
+#####################################################################################
+#####################################################################################
+
+
 def plot_hamiltonian_histogram(theta_true, theta_init, theta_final, hamiltonian_type, L):
     """
     Plot histogram comparing true, initial, and learned Hamiltonian parameters.
@@ -651,7 +698,8 @@ OPS_XYZ = build_xyz_basis(L, hamiltonian_type)
 NUM_COEFFICIENTS = get_theta_shape(L, hamiltonian_type)
 print(f"Number of Hamiltonian parameters: {NUM_COEFFICIENTS}")
 
-NN_MODEL_TYPE = config["NN_MODEL_TYPE"]; NN_MAP_FUN = mlp_forward
+#Define NN characteristics
+NN_MODEL_TYPE = config["NN_MODEL_TYPE"]; NN_MAP_FUN = mlp_forward #type of activation function
 if NN_MODEL_TYPE == "time_dependent": 
     NN_INPUT_DIM = 1
     NN_OUTPUT_DIM = NUM_COEFFICIENTS  # One coefficient per Hamiltonian operator
@@ -690,6 +738,7 @@ elif hamiltonian_type == "general_local_zz":
 else:
     raise ValueError(f"Unknown hamiltonian_type: {hamiltonian_type}")
 
+#Introduce variation to initial parameters to simulate worst starting point
 theta_init = jnp.array(theta_init_list, dtype=jnp.float32)
 if config["INIT_PERTURB_SCALE"] > 0: 
     theta_init += config["INIT_PERTURB_SCALE"] * random.normal(k_th, (NUM_COEFFICIENTS,))
@@ -697,10 +746,13 @@ if config["INIT_PERTURB_SCALE"] > 0:
 params = {"theta": theta_init, "nn": nn_params}
 
 # 3. TRAIN
+#defines step function (does not execute it)
 step_fn = make_step_fn(L, OPS_XYZ, NN_MAP_FUN, NN_MODEL_TYPE, config["MODEL_TYPE"], hamiltonian_type, config["lambda_reg"], config["learning_rate"])
 N_total = config["N_epochs"]
+#sepatate epochs in sections
 P1 = int(N_total * config["PHASE1_SPLIT"]); P2 = int(N_total * config["PHASE2_SPLIT"]); P3 = N_total - P1 - P2
 
+#Warm up (both VQE and NN)
 params, l1 = train_phase(params, P1, config, OPS_XYZ, NN_MAP_FUN, NN_MODEL_TYPE, config["MODEL_TYPE"], hamiltonian_type, t_grid_shots, psi0, counts_shots, train_theta=config["learn_theta"], train_nn=True, phase_name="P1 Warm-up", step_fn=step_fn)
 params, l2 = train_phase(params, P2, config, OPS_XYZ, NN_MAP_FUN, NN_MODEL_TYPE, config["MODEL_TYPE"], hamiltonian_type, t_grid_shots, psi0, counts_shots, train_theta=config["learn_theta"], train_nn=False, phase_name="P2 Distill", step_fn=step_fn)
 params, l3 = train_phase(params, P3, config, OPS_XYZ, NN_MAP_FUN, NN_MODEL_TYPE, config["MODEL_TYPE"], hamiltonian_type, t_grid_shots, psi0, counts_shots, train_theta=False, train_nn=True, phase_name="P3 Refine", step_fn=step_fn)
@@ -721,6 +773,12 @@ obs_model = calc_obs(psi_model)
 
 theta_final = params["theta"]
 nn_l2_norm = sum(jnp.sum(p**2) for p in jtu.tree_leaves(params["nn"]))
+
+
+
+
+
+
 
 print("\n==================================================================")
 print("           FINAL LEARNED HAMILTONIAN PARAMETERS")
