@@ -344,7 +344,8 @@ def make_observables(L):
 # ============================================================
 
 def mlp_forward(params, x):
-    '''Makes forward step of NN with specific activation function'''
+    '''Makes forward step of NN with specific activation function. Returns array of H coefficients (?)
+    NN structure [1]->[64]->[6]'''
     h = x
     for layer in params[:-1]: h = jnp.tanh(h @ layer["W"] + layer["b"])
     last = params[-1]
@@ -360,6 +361,7 @@ def init_mlp_params(layer_sizes, key, scale=0.1):
     return params
 
 def get_nn_coeffs_from_params(nn_params, t, NN_MAP_FUN):
+    #t_input attay of times (only 1 for time_dependent)
     t_input = jnp.array([[t]]); return NN_MAP_FUN(nn_params, t_input)[0] 
 
 def get_nn_state_dependent_correction(nn_params, psi, NN_MAP_FUN, dim):
@@ -371,19 +373,20 @@ def make_rhs_fun(L, OPS_XYZ, NN_MAP_FUN, NN_MODEL_TYPE, MODEL_TYPE, hamiltonian_
     '''Return function for rhs of NN equation'''
     dim = 2**L
     def H_phys(params):
-        '''Builds H from parameters'''
+        '''Builds H from theta parameters'''
         if MODEL_TYPE == "white": 
             return xyz_hamiltonian_from_theta(L, params["theta"], OPS_XYZ, hamiltonian_type)
         else: 
             return jnp.zeros((dim, dim), dtype=jnp.complex64) 
         
     def H_NN_time_dependent(nn_params, t):
+        #gets H coefficients from nn parameters
         coeffs = get_nn_coeffs_from_params(nn_params, t, NN_MAP_FUN)
         return sum(coeffs[k] * OPS_XYZ[k] for k in range(len(OPS_XYZ)))
         
     def rhs_ode(t: float, psi: Array, params: dict):
         '''Gives ODE from NN parameters'''
-        H_A = H_phys(params); phys_term = -1j * (H_A @ psi) #physical term
+        H_A = H_phys(params); phys_term = -1j * (H_A @ psi) #physical term from theta parameters
         #NN correction term
         if NN_MODEL_TYPE == "time_dependent":
             H_corr = H_NN_time_dependent(params["nn"], t)
@@ -550,10 +553,12 @@ def load_experimental_data(config):
 # 4. TRAINING HELPERS
 # ============================================================
 def adam_init(params):
+    '''Initialize adam parameters'''
     m = jtu.tree_map(jnp.zeros_like, params); v = jtu.tree_map(jnp.zeros_like, params)
     return {"step": 0, "m": m, "v": v}
 
 def adam_update(params, grads, opt_state, lr, beta1=0.9, beta2=0.999, eps=1e-8):
+    '''Adam optimization step'''
     step = opt_state["step"] + 1
     m = jtu.tree_map(lambda m, g: beta1*m + (1-beta1)*g, opt_state["m"], grads)
     v = jtu.tree_map(lambda v, g: beta2*v + (1-beta2)*(g*g), opt_state["v"], grads)
@@ -565,6 +570,7 @@ def adam_update(params, grads, opt_state, lr, beta1=0.9, beta2=0.999, eps=1e-8):
 def get_trainable_mask(params, train_theta, train_nn):
     # Create a mask PyTree that mirrors `params` structure. Each leaf is an array
     # of booleans with the same shape as the corresponding parameter leaf.
+    #Also selects if the theta or nn parameters will be trained or not
     mask = {}
     # theta is an array
     mask["theta"] = jnp.ones_like(params["theta"], dtype=bool) if train_theta else jnp.zeros_like(params["theta"], dtype=bool)
@@ -586,7 +592,13 @@ def make_step_fn(L, OPS_XYZ, NN_MAP_FUN, NN_MODEL_TYPE, MODEL_TYPE, hamiltonian_
 
     @jax.jit
     def step_fn(params, opt_state, t_grid_shots, psi0, counts_shots, trainable_mask):
-        # Compute loss and gradients
+        '''Execute nn + optimizer step
+        params: simulation parameters (theta + nn)
+        opt_state: optimization state
+        trainable_mask: jnp.tree structure that contains the parameters to train 
+                        (with theta and nn activated or deactivated depending on the training phase)
+        '''
+        # Compute loss and gradients (evolves trajectory with current parameters and calculates gradient)
         (loss_val, aux), grads = grad_fn(params, L, OPS_XYZ, NN_MAP_FUN, NN_MODEL_TYPE, MODEL_TYPE, hamiltonian_type, lambda_reg, t_grid_shots, psi0, counts_shots)
         # Apply mask to gradients so only selected parameters are updated
         masked_grads = jtu.tree_map(lambda g, m: jnp.where(m, g, jnp.zeros_like(g)), grads, trainable_mask)
@@ -597,10 +609,44 @@ def make_step_fn(L, OPS_XYZ, NN_MAP_FUN, NN_MODEL_TYPE, MODEL_TYPE, hamiltonian_
     return step_fn
 
 def train_phase(params_init, N_epochs, config, OPS_XYZ, NN_MAP_FUN, NN_MODEL_TYPE, MODEL_TYPE, hamiltonian_type, t_grid_shots, psi0, counts_shots, train_theta, train_nn, phase_name, step_fn):
-    if N_epochs <= 0: return params_init, []
+    '''Execute a phase of the training
+    Args:
+    params_init: theta params + NN initial params
+    N_epochs (of this particular phase)
+    config (from the top of the script)
+    OPS_XYZ: List of possible pauli strings in H
+    NN_MAP_FUN: function to perform forward step (contains activation function)
+    NN_MODEL_TYPE: time dependent or state dependent
+    MODEL_TYPE: same as NN_MODEL_TYPE (redundant variable)
+    hamiltonian type: (either uniform_xyz, or general_local_zz)
+    t_grid_shots: timestamps where we sample shots
+    psi0: initial state
+    count_shots: number of shots per timestamp
+    train_theta: true or false. to activate variational training of physical parameters
+    train_nn: true or false: to train nn
+    phase_name: for identification
+    step_fn: function for step of NN. Contains activation function for NN and other stuff
+    '''
+    # Return early if no training epochs
+    if N_epochs <= 0:
+        return params_init, []
+
+    # Determine if theta is trained or not
+    # For white-box mode, θ can be trained if specified
+    # For black-box mode, θ is never trained (always frozen)
     train_theta_current = train_theta and (MODEL_TYPE == "white")
-    print(f"\n--- Phase: {phase_name} ({'θ TRAINED' if train_theta_current else 'θ Frozen'}, {'φ TRAINED' if train_nn else 'φ Frozen'}) ---")
-    params = params_init; opt_state = adam_init(params_init); losses = []
+
+    # Print phase information
+    print(f"\n--- Phase: {phase_name} ({'θ TRAINED' if train_theta_current else 'θ Frozen'}, "
+        f"{'φ TRAINED' if train_nn else 'φ Frozen'}) ---")
+
+    # Initialize optimizer state and loss tracking
+    params = params_init
+    #optimizer_state
+    opt_state = adam_init(params_init)
+    losses = []
+
+    # Create mask to selectively train only specified parameters
     trainable_mask = get_trainable_mask(params, train_theta_current, train_nn)
     
     # Prepare true params for logging if available
@@ -610,9 +656,11 @@ def train_phase(params_init, N_epochs, config, OPS_XYZ, NN_MAP_FUN, NN_MODEL_TYP
     print(f"  Training {num_params} parameters")
     
     for epoch in range(1, N_epochs + 1):
+        #call forward function
         params, opt_state, loss_val, (loss_nll, reg, psi_traj) = step_fn(params, opt_state, t_grid_shots, psi0, counts_shots, trainable_mask)
         loss_val, loss_nll, reg = jax.device_get((loss_val, loss_nll, reg))
         losses.append(float(loss_val))
+        #Print information
         if epoch % config["print_every"] == 0 or epoch == N_epochs:
             print(f"[{phase_name} {epoch:03d}/{N_epochs}] total_loss = {loss_val:.4e} | nll = {loss_nll:.4e} | reg = {reg:.4e}")
             if MODEL_TYPE == "white" and num_params <= 20:  # Don't print too many params
@@ -773,11 +821,6 @@ obs_model = calc_obs(psi_model)
 
 theta_final = params["theta"]
 nn_l2_norm = sum(jnp.sum(p**2) for p in jtu.tree_leaves(params["nn"]))
-
-
-
-
-
 
 
 print("\n==================================================================")
