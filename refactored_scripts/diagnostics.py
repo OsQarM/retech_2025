@@ -28,18 +28,13 @@ def print_run_info(config, expected_shape):
     print(f"Expected parameter count: {expected_shape}")
     return
 
-def print_global_linblad_info(T1, T2):
+def print_linblad_info(L, T1_list, T2_list, noise_model):
 
-    print(f"Using Lindblad dynamics (global noise)")
-    print(f"  T1 = {T1:.2f}, T2 = {T2:.2f} (all qubits)")
-    gamma_deph = 1.0/T2 - 1.0/(2*T1)
-    gamma_damp = 1.0/T1
-    print(f"  γ_dephasing = {gamma_deph:.4f}, γ_damping = {gamma_damp:.4f}")
-    return
+    if noise_model == "global":
+        print(f"Using Lindblad dynamics (global noise)")
+    elif noise_model == "local":
+        print(f"Using Lindblad dynamics (per-qubit noise)")
 
-def print_local_linblad_info(L, T1_list, T2_list):
-
-    print(f"Using Lindblad dynamics (per-qubit noise)")
     print(f"  T1 per qubit: {[f'{t:.2f}' for t in T1_list]}")
     print(f"  T2 per qubit: {[f'{t:.2f}' for t in T2_list]}")
     # Calculate rates for each qubit

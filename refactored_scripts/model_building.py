@@ -14,7 +14,7 @@ Array = jnp.ndarray
 
 sys.path.append('./')
 
-from diagnostics import print_local_linblad_info, print_global_linblad_info
+from diagnostics import print_linblad_info
 
 def paulis(dtype=jnp.complex64):
     '''Creates single-qubit basis operators'''
@@ -147,7 +147,7 @@ def xyz_hamiltonian_from_theta(L: int, theta: Array, OPS_XYZ: list,
     
     return H
 
-def build_lindblad_operators_local(L: int, T1_list: list, T2_list: list, 
+def build_lindblad_operators(L: int, T1_list: list, T2_list: list, 
                                        dtype=jnp.complex64):
     """
     Build Lindblad operators with per-qubit noise rates.
@@ -193,45 +193,6 @@ def build_lindblad_operators_local(L: int, T1_list: list, T2_list: list,
             ops_dephase[i] = sz / jnp.sqrt(2.0)
             operators.append(kron_n(ops_dephase))
             rates.append(gamma_dephase)
-    
-    return operators, rates
-
-def build_lindblad_operators_global(L: int, T1: float, T2: float, dtype=jnp.complex64):
-    """
-    Build Lindblad operators with global (uniform) noise rates.
-    
-    Args:
-        L: Number of qubits
-        T1: Global T1 time
-        T2: Global T2 time
-    
-    Returns:
-        operators: List of jump operators
-        rates: List of corresponding rates
-    """
-    sx, sy, sz, id2 = paulis(dtype)
-    sigma_minus = (sx - 1j * sy) / 2.0
-    
-    operators = []
-    rates = []
-    
-    decay_rate = 1.0 / T1 if T1 > 0 else 0.0
-    dephasing_rate = max(1.0 / T2 - 1.0 / (2.0 * T1), 0.0) if T1 > 0 and T2 > 0 else 0.0
-    
-    for i in range(L):
-        # Decay operator for qubit i
-        if decay_rate > 0:
-            ops_decay = [id2] * L
-            ops_decay[i] = sigma_minus
-            operators.append(kron_n(ops_decay))
-            rates.append(decay_rate)
-        
-        # Dephasing operator for qubit i
-        if dephasing_rate > 0:
-            ops_dephase = [id2] * L
-            ops_dephase[i] = sz / jnp.sqrt(2.0)
-            operators.append(kron_n(ops_dephase))
-            rates.append(dephasing_rate)
     
     return operators, rates
 
@@ -298,26 +259,22 @@ def define_dynamics(config, theta_true, params_true):
 
         # Build Lindblad operators based on noise model
         if noise_model == "global":
-
-            T1 = config.get("T1_global", 10.0)
-            T2 = config.get("T2_global", 5.0)
-            jump_ops, jump_rates = build_lindblad_operators_global(L, T1, T2)
-            print_global_linblad_info(T1, T2)
+            T1_list = [config.get("T1_global", 10.0)]*L
+            T2_list = [config.get("T2_global", 5.0)]*L
 
         elif noise_model == "local":
-
             T1_list = config.get("T1_list", [10.0] * L)
             T2_list = config.get("T2_list", [5.0] * L)
-            
-            if len(T1_list) != L or len(T2_list) != L:
-                raise ValueError(f"T1_list and T2_list must have length L={L}")
-            
-            jump_ops, jump_rates = build_lindblad_operators_local(L, T1_list, T2_list)
-
-            print_local_linblad_info(L, T1_list, T2_list)
 
         else:
             raise ValueError(f"Unknown noise_model: {noise_model}")
+            
+        if len(T1_list) != L or len(T2_list) != L:
+            raise ValueError(f"T1_list and T2_list must have length L={L}")
+            
+        jump_ops, jump_rates = build_lindblad_operators(L, T1_list, T2_list)
+        print_linblad_info(L, T1_list, T2_list, noise_model)
+
         
         params_true["jump_operators"] = jump_ops
         params_true["jump_rates"] = jump_rates
