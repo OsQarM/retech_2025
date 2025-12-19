@@ -8,14 +8,13 @@ Created on Fri Dec 19 10:31:09 2025
 
 import jax
 import jax.numpy as jnp
-from jax import random, lax
-import numpy as np
-import pandas as pd
-import copy 
 import sys
-import yaml
 
 Array = jnp.ndarray
+
+sys.path.append('./')
+
+from diagnostics import print_local_linblad_info, print_global_linblad_info
 
 def paulis(dtype=jnp.complex64):
     '''Creates single-qubit basis operators'''
@@ -136,7 +135,7 @@ def get_theta_true_from_config(config: dict) -> Array:
 def xyz_hamiltonian_from_theta(L: int, theta: Array, OPS_XYZ: list, 
                                hamiltonian_type: str = "uniform_xyz") -> Array:
     '''Creates Hamiltonian from list of operators and corresponding weights'''
-    
+
     expected_shape = get_theta_shape(L, hamiltonian_type)
     
     if len(theta) != expected_shape or len(OPS_XYZ) != expected_shape:
@@ -148,7 +147,7 @@ def xyz_hamiltonian_from_theta(L: int, theta: Array, OPS_XYZ: list,
     
     return H
 
-def build_lindblad_operators_per_qubit(L: int, T1_list: list, T2_list: list, 
+def build_lindblad_operators_local(L: int, T1_list: list, T2_list: list, 
                                        dtype=jnp.complex64):
     """
     Build Lindblad operators with per-qubit noise rates.
@@ -281,3 +280,52 @@ def lindblad_rhs(t, rho, params):
     
     return drho
     
+
+def define_dynamics(config, theta_true, params_true):
+
+    L = config["L"]
+    dynamics_type = config.get("dynamics_type", "schrodinger")
+    hamiltonian_type = config.get("hamiltonian_type", "uniform_xyz")
+    noise_model = config.get("noise_model", "global")
+
+    if dynamics_type == "schrodinger":
+
+        rhs_fun = schrodinger_rhs
+        print(f"Using Schrödinger dynamics (noiseless)")
+        print(f"Hamiltonian: {hamiltonian_type} ({len(theta_true)} params)")
+        
+    elif dynamics_type == "lindblad":
+
+        # Build Lindblad operators based on noise model
+        if noise_model == "global":
+
+            T1 = config.get("T1_global", 10.0)
+            T2 = config.get("T2_global", 5.0)
+            jump_ops, jump_rates = build_lindblad_operators_global(L, T1, T2)
+            print_global_linblad_info(T1, T2)
+
+        elif noise_model == "local":
+
+            T1_list = config.get("T1_list", [10.0] * L)
+            T2_list = config.get("T2_list", [5.0] * L)
+            
+            if len(T1_list) != L or len(T2_list) != L:
+                raise ValueError(f"T1_list and T2_list must have length L={L}")
+            
+            jump_ops, jump_rates = build_lindblad_operators_local(L, T1_list, T2_list)
+
+            print_local_linblad_info(L, T1_list, T2_list)
+
+        else:
+            raise ValueError(f"Unknown noise_model: {noise_model}")
+        
+        params_true["jump_operators"] = jump_ops
+        params_true["jump_rates"] = jump_rates
+        rhs_fun = lindblad_rhs
+        print(f"Hamiltonian: {hamiltonian_type} ({len(theta_true)} params)")
+        print(f"Jump operators: {len(jump_ops)}")
+
+    else:
+        raise ValueError(f"Unknown dynamics_type: {dynamics_type}")
+    
+    return rhs_fun, params_true
