@@ -18,6 +18,7 @@ import yaml
 Array = jnp.ndarray
 
 def paulis(dtype=jnp.complex64):
+    '''Creates single-qubit basis operators'''
     sx = jnp.array([[0., 1.],[1., 0.]], dtype=dtype)
     sy = jnp.array([[0., -1j],[1j, 0.]], dtype=dtype)
     sz = jnp.array([[1., 0.],[0., -1.]], dtype=dtype)
@@ -25,11 +26,13 @@ def paulis(dtype=jnp.complex64):
     return sx, sy, sz, id2
 
 def kron_n(ops):
+    '''Tensor product of a list of operators'''
     out = ops[0]
     for A in ops[1:]: out = jnp.kron(out, A)
     return out
 
 def get_theta_shape(L: int, hamiltonian_type: str) -> int:
+    '''Returns size of parameter list depending on the model chosen'''
     if hamiltonian_type == "uniform_xyz":
         return 6
     elif hamiltonian_type == "general_local_zz":
@@ -83,6 +86,9 @@ def general_local_zz_basis(L, sx, sy, sz, id2, dtype=jnp.complex64):
 
 
 def build_xyz_basis(L: int, hamiltonian_type: str = "uniform_xyz", dtype=jnp.complex64):
+    '''Generates list of basis operators that will be present in the Hamiltonian.
+        It chooses between the available models. It's written like this so that it
+        Can be expanded to accomodate more models'''
     sx, sy, sz, id2 = paulis(dtype)
     dim = 2**L
 
@@ -97,6 +103,9 @@ def build_xyz_basis(L: int, hamiltonian_type: str = "uniform_xyz", dtype=jnp.com
     return ops_out
 
 def get_theta_true_from_config(config: dict) -> Array:
+    '''Returns Hamiltonian parameters defined in the configuration file.
+        It chooses between the different available models'''
+    
     hamiltonian_type = config.get("hamiltonian_type", "uniform_xyz")
     
     if hamiltonian_type == "uniform_xyz":
@@ -123,8 +132,11 @@ def get_theta_true_from_config(config: dict) -> Array:
     
     return theta_true
 
+
 def xyz_hamiltonian_from_theta(L: int, theta: Array, OPS_XYZ: list, 
                                hamiltonian_type: str = "uniform_xyz") -> Array:
+    '''Creates Hamiltonian from list of operators and corresponding weights'''
+    
     expected_shape = get_theta_shape(L, hamiltonian_type)
     
     if len(theta) != expected_shape or len(OPS_XYZ) != expected_shape:

@@ -47,6 +47,29 @@ def print_run_info(config):
     # Print parameter information
     expected_shape = get_theta_shape(config['L'], config['hamiltonian_type'])
     print(f"Expected parameter count: {expected_shape}")
+    return
+
+def print_global_linblad_info(T1, T2):
+
+    print(f"Using Lindblad dynamics (global noise)")
+    print(f"  T1 = {T1:.2f}, T2 = {T2:.2f} (all qubits)")
+    gamma_deph = 1.0/T2 - 1.0/(2*T1)
+    gamma_damp = 1.0/T1
+    print(f"  γ_dephasing = {gamma_deph:.4f}, γ_damping = {gamma_damp:.4f}")
+    return
+
+def print_local_linblad_info(L, T1_list, T2_list):
+
+    print(f"Using Lindblad dynamics (per-qubit noise)")
+    print(f"  T1 per qubit: {[f'{t:.2f}' for t in T1_list]}")
+    print(f"  T2 per qubit: {[f'{t:.2f}' for t in T2_list]}")
+    # Calculate rates for each qubit
+    gamma_deph_list = [1.0/T2_list[i] - 1.0/(2*T1_list[i]) for i in range(L)]
+    gamma_damp_list = [1.0/T1_list[i] for i in range(L)]
+    print(f"  γ_dephasing per qubit: {[f'{g:.4f}' for g in gamma_deph_list]}")
+    print(f"  γ_damping per qubit: {[f'{g:.4f}' for g in gamma_damp_list]}")
+    return
+
 
 
 def generate_dataset(config, OPS_XYZ=None):
@@ -90,24 +113,26 @@ def generate_dataset(config, OPS_XYZ=None):
     }
     
     # Choose dynamics
+    
+
     if dynamics_type == "schrodinger":
+
         rhs_fun = schrodinger_rhs
         print(f"Using Schrödinger dynamics (noiseless)")
         print(f"Hamiltonian: {hamiltonian_type} ({len(theta_true)} params)")
         
     elif dynamics_type == "lindblad":
+
         # Build Lindblad operators based on noise model
         if noise_model == "global":
+
             T1 = config.get("T1_global", 10.0)
             T2 = config.get("T2_global", 5.0)
             jump_ops, jump_rates = build_lindblad_operators_global(L, T1, T2)
-            print(f"Using Lindblad dynamics (global noise)")
-            print(f"  T1 = {T1:.2f}, T2 = {T2:.2f} (all qubits)")
-            gamma_deph = 1.0/T2 - 1.0/(2*T1)
-            gamma_damp = 1.0/T1
-            print(f"  γ_dephasing = {gamma_deph:.4f}, γ_damping = {gamma_damp:.4f}")
-            
+            print_global_linblad_info(T1, T2)
+
         elif noise_model == "local":
+
             T1_list = config.get("T1_list", [10.0] * L)
             T2_list = config.get("T2_list", [5.0] * L)
             
@@ -115,15 +140,9 @@ def generate_dataset(config, OPS_XYZ=None):
                 raise ValueError(f"T1_list and T2_list must have length L={L}")
             
             jump_ops, jump_rates = build_lindblad_operators_per_qubit(L, T1_list, T2_list)
-            print(f"Using Lindblad dynamics (per-qubit noise)")
-            print(f"  T1 per qubit: {[f'{t:.2f}' for t in T1_list]}")
-            print(f"  T2 per qubit: {[f'{t:.2f}' for t in T2_list]}")
-            
-            # Calculate rates for each qubit
-            gamma_deph_list = [1.0/T2_list[i] - 1.0/(2*T1_list[i]) for i in range(L)]
-            gamma_damp_list = [1.0/T1_list[i] for i in range(L)]
-            print(f"  γ_dephasing per qubit: {[f'{g:.4f}' for g in gamma_deph_list]}")
-            print(f"  γ_damping per qubit: {[f'{g:.4f}' for g in gamma_damp_list]}")
+
+            print_local_linblad_info(L, T1_list, T2_list)
+
         else:
             raise ValueError(f"Unknown noise_model: {noise_model}")
         
