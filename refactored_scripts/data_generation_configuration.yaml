@@ -1,0 +1,41 @@
+# config.yaml
+
+L: 4
+t_max: 1.0
+dt: 0.01
+N_time_shots: 101
+N_shots_per_time: 5000
+initial_state_kind: "all_plus"
+seed_data: 1234
+
+# HAMILTONIAN TYPE
+hamiltonian_type: "general_local_zz"  # "uniform_xyz" or "general_local_zz"
+
+# TRUE HAMILTONIAN PARAMETERS
+# For "uniform_xyz":
+Jx_true: 0.9 
+Jy_true: 1.1 
+Jz_true: 0.4
+hx_true: 0.3 
+hy_true: 0.1 
+hz_true: 0.2
+
+# For "general_local_zz":
+hx_list_true: [0.3, 0.8, 0.4, 0.9]
+hz_list_true: [0.65, 0.2, 0.15, 0.43]
+Jzz_list_true: [0.4, 0.25, 0.1]
+
+# DYNAMICS TYPE
+dynamics_type: "schrodinger"  # "schrodinger" or "lindblad"
+
+# NOISE MODEL
+noise_model: "local" # "global" (same for all qubits) or "local" (per-qubit)
+
+# NOISE PARAMETERS
+# For "global" noise model:
+T1_global: 10.0
+T2_global: 5.0
+
+# For "local" noise model (per-qubit T1 and T2):
+T1_list: [10.0, 8.0, 12.0, 9.0]   # T1 for each qubit
+T2_list: [5.0, 4.0, 6.0, 4.5]     # T2 for each qubit
