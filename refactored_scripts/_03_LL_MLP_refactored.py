@@ -122,7 +122,7 @@ if __name__ == "__main__":
     if len(sys.argv) > 1:
         config_file = sys.argv[1]
     else:
-        config_file = "./data_generation_configuration.yaml"
+        config_file = "./lindbladian_learning_configuration.yaml"
 
     #load configuration
     CONFIG = load_config(config_file)

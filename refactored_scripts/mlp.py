@@ -19,7 +19,7 @@ import yaml
 sys.path.append('./')
 
 from model_building import xyz_hamiltonian_from_theta, get_theta_shape
-from time_evolution import evolve_trajectory, evolve_lindblad
+from time_evolution import evolve_trajectory, evolve_lindblad, vectorize_density_matrix, unvectorize_density_matrix
 
 Array = jnp.ndarray
 
@@ -169,6 +169,38 @@ def make_rhs_lindblad(L, OPS_XYZ, NN_MAP_FUN, NN_MODEL_TYPE, MODEL_TYPE, hamilto
             gamma_damp_vec = jnp.zeros((L,))
         
         return gamma_deph_vec, gamma_damp_vec
+    
+    def rhs_ode(t: float, rho_vec: Array, params: dict):
+        rho = unvectorize_density_matrix(rho_vec, dim)
+        
+        # Hamiltonian evolution
+        H_total = H_phys(params)
+        if MODEL_TYPE != "black":
+            H_total = H_total + H_NN_time_dependent(params["nn"], t)
+        
+        drho = -1j * (H_total @ rho - rho @ H_total)
+        
+        # Lindblad dissipators
+        gamma_deph_vec, gamma_damp_vec = extract_noise_rates(params)
+        
+        # Vectorized computation
+        Z = jnp.stack(dephasing_ops)
+        Sm = jnp.stack(damping_ops)
+        Sp = jnp.conj(jnp.swapaxes(Sm, -1, -2))
+        
+        # Dephasing: γ (Z ρ Z - ρ)
+        deph = gamma_deph_vec[:, None, None] * (Z @ rho @ Z - rho)
+        
+        # Damping: γ (σ- ρ σ+ - 0.5{σ+ σ-, ρ})
+        jump = Sm @ rho @ Sp
+        anticomm = 0.5 * (Sp @ Sm @ rho + rho @ Sp @ Sm)
+        damp = gamma_damp_vec[:, None, None] * (jump - anticomm)
+        
+        diss = jnp.sum(deph + damp, axis=0)
+        
+        return vectorize_density_matrix(drho + diss)
+    
+    return rhs_ode
 
 
 

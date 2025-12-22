@@ -1,6 +1,6 @@
 # config.yaml
 
-L: 4
+L: 3
 t_max: 1.0
 dt: 0.01
 N_time_shots: 101
@@ -9,7 +9,7 @@ initial_state_kind: "all_plus"
 seed_data: 1234
 
 # HAMILTONIAN TYPE
-hamiltonian_type: "general_local_zz"  # "uniform_xyz" or "general_local_zz"
+hamiltonian_type: "uniform_xyz"  # "uniform_xyz" or "general_local_zz"
 
 # TRUE HAMILTONIAN PARAMETERS
 # For "uniform_xyz":
@@ -37,5 +37,5 @@ T1_global: 10.0
 T2_global: 5.0
 
 # For "local" noise model (per-qubit T1 and T2):
-T1_list: [10.0, 8.0, 12.0, 9.0]   # T1 for each qubit
-T2_list: [5.0, 4.0, 6.0, 4.5]     # T2 for each qubit
+T1_list: [10.0, 8.0, 12.0]   # T1 for each qubit of length L
+T2_list: [5.0, 4.0, 6.0]     # T2 for each qubit of length L

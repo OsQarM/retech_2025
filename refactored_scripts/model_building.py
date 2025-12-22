@@ -8,7 +8,9 @@ Created on Fri Dec 19 10:31:09 2025
 
 import jax
 import jax.numpy as jnp
+import numpy as np
 import sys
+from typing import Optional
 
 Array = jnp.ndarray
 
@@ -147,25 +149,49 @@ def xyz_hamiltonian_from_theta(L: int, theta: Array, OPS_XYZ: list,
     
     return H
 
-def build_lindblad_operators(L: int, T1_list: list, T2_list: list, 
-                                       dtype=jnp.complex64):
+def build_lindblad_operators(L: int, T1_list: Optional[list] = None, 
+                             T2_list: Optional[list] = None, dtype=jnp.complex64):
     """
-    Build Lindblad operators with per-qubit noise rates.
+    Build Lindblad operators. If T1_list and T2_list are provided, returns
+    operators with rates. Otherwise returns dephasing and damping operators separately.
     
     Args:
         L: Number of qubits
-        T1_list: List of T1 times (length L)
-        T2_list: List of T2 times (length L)
+        T1_list: Optional list of T1 times (length L). If None, returns operators without rates.
+        T2_list: Optional list of T2 times (length L). If None, returns operators without rates.
     
     Returns:
-        operators: List of jump operators
-        rates: List of corresponding rates
+        If T1_list and T2_list are provided:
+            operators: List of jump operators
+            rates: List of corresponding rates
+        Otherwise:
+            dephasing_ops: List of dephasing operators (σ_z/√2 for each qubit)
+            damping_ops: List of damping operators (σ_- for each qubit)
     """
-    if len(T1_list) != L or len(T2_list) != L:
-        raise ValueError(f"T1_list and T2_list must have length L={L}")
-    
     sx, sy, sz, id2 = paulis(dtype)
     sigma_minus = (sx - 1j * sy) / 2.0
+    
+    # Case 1: No rates provided, return dephasing and damping ops separately
+    if T1_list is None or T2_list is None:
+        dephasing_ops = []
+        damping_ops = []
+        
+        for i in range(L):
+            # Dephasing operator: σ_z / sqrt(2)
+            ops_dephase = [id2] * L
+            ops_dephase[i] = sz / jnp.sqrt(2.0)
+            dephasing_ops.append(kron_n(ops_dephase))
+            
+            # Damping operator: σ_-
+            ops_decay = [id2] * L
+            ops_decay[i] = sigma_minus
+            damping_ops.append(kron_n(ops_decay))
+        
+        return dephasing_ops, damping_ops
+    
+    # Case 2: Rates provided, return operators with rates
+    if len(T1_list) != L or len(T2_list) != L:
+        raise ValueError(f"T1_list and T2_list must have length L={L}")
     
     operators = []
     rates = []
@@ -197,15 +223,20 @@ def build_lindblad_operators(L: int, T1_list: list, T2_list: list,
     return operators, rates
 
 
-def prepare_initial_state(L: int, kind: str, as_density_matrix=False) -> Array:
-    dim = 2**L
-    if kind == "all_zeros":
-        psi = jnp.zeros((dim,), dtype=jnp.complex64).at[0].set(1.0 + 0.0j)
-    elif kind == "all_plus":
-        amp = 1.0 / jnp.sqrt(dim)
-        psi = jnp.full((dim,), amp, dtype=jnp.complex64)
+def prepare_initial_state(L: int, kind: str, loaded_vector: np.ndarray = None, 
+                          as_density_matrix: bool = False) -> Array:
+    """Prepare initial state as vector or density matrix"""
+    if loaded_vector is not None:
+        psi = jnp.array(loaded_vector, dtype=jnp.complex64)
     else:
-        raise ValueError(f"Unknown initial state kind: {kind}")
+        dim = 2**L
+        if kind == "all_zeros":
+            psi = jnp.zeros((dim,), dtype=jnp.complex64).at[0].set(1.0 + 0.0j)
+        elif kind == "all_plus":
+            amp = 1.0 / jnp.sqrt(dim)
+            psi = jnp.full((dim,), amp, dtype=jnp.complex64)
+        else:
+            psi = jnp.zeros((dim,), dtype=jnp.complex64).at[0].set(1.0 + 0.0j)
     
     if as_density_matrix:
         psi = psi.reshape(-1, 1)
