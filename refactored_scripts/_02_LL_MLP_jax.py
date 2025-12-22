@@ -21,16 +21,16 @@ Array = jnp.ndarray
 # ============================================================
 CONFIG = {
     # SYSTEM PARAMETERS
-    "L": 4,
+    "L": 3,
     "t_max": 1.0,
     "initial_state_kind": "all_plus",
     
     # HAMILTONIAN MODEL
-    "hamiltonian_type": "general_local_zz",  # "uniform_xyz" or "general_local_zz"
+    "hamiltonian_type": "uniform_xyz",  # "uniform_xyz" or "general_local_zz"
     
     # NOISE SETTINGS
-    "use_noisy_dynamics": False,  # Set to True to use Lindblad dynamics
-    "learn_noise_params": False,   # Whether to learn noise rates
+    "use_noisy_dynamics": True,  # Set to True to use Lindblad dynamics
+    "learn_noise_params": True,   # Whether to learn noise rates
     "noise_model": "local",       # "global" (2 params) or "local" (2L params)
     
     # Initial guesses for noise (used if learn_noise_params=True)
@@ -46,9 +46,9 @@ CONFIG = {
     # HAMILTONIAN INITIAL GUESS
     "Jx_init": 0.5, "Jy_init": 0.5, "Jz_init": 0.5,
     "hx_init": 0.0, "hy_init": 0.0, "hz_init": 0.5,
-    "hx_list_init": [0]*4,
-    "hz_list_init": [0]*4,
-    "Jzz_list_init": [0]*3,
+    "hx_list_init": [0]*3,
+    "hz_list_init": [0]*3,
+    "Jzz_list_init": [0]*2,
     "INIT_PERTURB_SCALE": 0.0,
     
     # NDE ARCHITECTURE

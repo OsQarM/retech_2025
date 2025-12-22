@@ -248,15 +248,6 @@ if __name__ == "__main__":
     nn_l2_norm = sum(jnp.sum(p**2) for p in jtu.tree_leaves(params["nn"]))
 
 
-
-    #######################################################################
-    #######################################################################
-    #######################################################################
-    #######################################################################
-    #######################################################################
-    #######################################################################
-
-
     print(f"\n{'='*60}")
     print(f"FINAL RESULTS")
     print(f"{'='*60}")
@@ -270,16 +261,16 @@ if __name__ == "__main__":
     # Compare with true parameters
     if theta_true_array is not None:
         print_relative_error(theta_true_array, theta_final)
+        theta_true = np.array(theta_true_array)
     else:
         theta_true = None
     
     # Generate trajectories for diagnostics
     print(f"\nGenerating trajectories for diagnostics...")
 
-    traj_model, traj_vanilla, traj_true, obs_true, obs_model, obs_vanilla, traj_model_np, traj_van_np = generate_diagnostic_trajectories(CONFIG, OPS_XYZ, NN_MAP_FUN, 
-                                                                                                                                         dephasing_ops, damping_ops, 
-                                                                                                                                         state0, t_grid_long, params, theta_true)
-        
+    traj_model, traj_vanilla, traj_true, obs_true, obs_model, obs_vanilla = generate_diagnostic_trajectories(CONFIG, OPS_XYZ, NN_MAP_FUN, 
+                                                                                                            dephasing_ops, damping_ops, 
+                                                                                                            state0, t_grid_long, params, theta_true)
     # PLOTTING
     print(f"\nGenerating plots...")
     
