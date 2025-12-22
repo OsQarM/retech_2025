@@ -86,6 +86,26 @@ def general_local_zz_basis(L, sx, sy, sz, id2, dtype=jnp.complex64):
     return ops_out
 
 
+def make_observables(L):
+    sx, sy, sz, id2 = paulis()
+    obs = {}
+    
+    for qubit in range(L):
+        for name, pauli in [('X', sx), ('Y', sy), ('Z', sz)]:
+            ops = [id2] * L
+            ops[qubit] = pauli
+            obs[f'{name}_{qubit}'] = kron_n(ops)
+    
+    for i in range(L-1):
+        for name, pauli in [('X', sx), ('Y', sy), ('Z', sz)]:
+            ops = [id2] * L
+            ops[i] = pauli
+            ops[i+1] = pauli
+            obs[f'{name}_{i} {name}_{i+1}'] = kron_n(ops)
+    
+    return obs
+
+
 def build_xyz_basis(L: int, hamiltonian_type: str = "uniform_xyz", dtype=jnp.complex64):
     '''Generates list of basis operators that will be present in the Hamiltonian.
         It chooses between the available models. It's written like this so that it

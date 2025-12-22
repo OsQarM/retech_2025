@@ -19,9 +19,9 @@ import yaml
 sys.path.append('./')
 
 from model_building import get_theta_shape, build_xyz_basis, build_lindblad_operators, prepare_initial_state
-from diagnostics import print_training_info
+from diagnostics import print_training_info, print_hamiltonian_parameters, print_noise_parameters, print_relative_error, generate_diagnostic_trajectories
 from mlp import init_mlp_params, mlp_forward, make_step_fn, train_phase
-
+from figures import plot_noise_parameters, plot_hamiltonian_parameters, plot_mixed_state_fidelity, plot_purity, plot_pure_state_fidelity, plot_observables, plot_training_loss
 
 Array = jnp.ndarray
 
@@ -246,3 +246,96 @@ if __name__ == "__main__":
     # Extract final parameters
     theta_final = np.array(jax.device_get(params["theta"]))
     nn_l2_norm = sum(jnp.sum(p**2) for p in jtu.tree_leaves(params["nn"]))
+
+
+
+    #######################################################################
+    #######################################################################
+    #######################################################################
+    #######################################################################
+    #######################################################################
+    #######################################################################
+
+
+    print(f"\n{'='*60}")
+    print(f"FINAL RESULTS")
+    print(f"{'='*60}")
+
+    print_hamiltonian_parameters(CONFIG, hamiltonian_type, theta_final, nn_l2_norm)
+
+    # Print noise parameters if learned
+    if "noise_rates" in params:
+        print_noise_parameters(CONFIG, params)
+    
+    # Compare with true parameters
+    if theta_true_array is not None:
+        print_relative_error(theta_true_array, theta_final)
+    else:
+        theta_true = None
+    
+    # Generate trajectories for diagnostics
+    print(f"\nGenerating trajectories for diagnostics...")
+
+    traj_model, traj_vanilla, traj_true, obs_true, obs_model, obs_vanilla, traj_model_np, traj_van_np = generate_diagnostic_trajectories(CONFIG, OPS_XYZ, NN_MAP_FUN, 
+                                                                                                                                         dephasing_ops, damping_ops, 
+                                                                                                                                         state0, t_grid_long, params, theta_true)
+        
+    # PLOTTING
+    print(f"\nGenerating plots...")
+    
+    # 1. Hamiltonian parameters
+    fig_ham = plot_hamiltonian_parameters(theta_true, np.array(theta_init), 
+                                         theta_final, hamiltonian_type, L)
+    plt.show()
+    
+    # 2. Noise parameters (if applicable)
+    if "noise_rates" in params:
+        true_noise_rates = None
+        if "gamma_deph_true" in CONFIG and "gamma_damp_true" in CONFIG:
+            if CONFIG["noise_model"] == "global":
+                true_noise_rates = [CONFIG["gamma_deph_true"], CONFIG["gamma_damp_true"]]
+            else:
+                true_noise_rates = ([CONFIG["gamma_deph_true"]] * L + [CONFIG["gamma_damp_true"]] * L)
+        # Learned noise rates (convert to numpy)
+        try:
+            learned_noise_rates = np.array(jax.device_get(params["noise_rates"]))
+        except Exception:
+            learned_noise_rates = None
+        try:
+            fig_noise = plot_noise_parameters(learned_noise_rates, true_noise_rates, CONFIG["noise_model"], L)
+            plt.show()
+        except Exception as e:
+            print(f"  Warning: failed to plot noise parameters: {e}")
+
+    
+    # 3. Fidelity / Purity diagnostics
+    print("\nComputing fidelity and purity diagnostics...")
+
+    if use_noisy: 
+        try:
+            # Mixed-state fidelity
+            traj_model_np, traj_van_np = plot_mixed_state_fidelity(traj_model, traj_vanilla, traj_true, CONFIG, t_grid_long)
+            # Purity trajectories
+            plot_purity(traj_model_np, traj_van_np, t_grid_long, CONFIG)
+        except Exception as e:
+            print(f"  Warning: failed mixed-state diagnostics: {e}")
+
+    else:
+        # Pure-state fidelity (same style as original script)
+        try:
+            plot_pure_state_fidelity(traj_model, traj_vanilla, traj_true, CONFIG, t_grid_long, L)
+        except Exception as e:
+            print(f"  Warning: failed pure-state diagnostics: {e}")
+
+    # 4. Observables
+    try:
+        fig_obs = plot_observables(t_grid_long, obs_true, obs_model, obs_vanilla, L, hamiltonian_type, CONFIG)
+        plt.show()
+    except Exception as e:
+        print(f"  Warning: failed to plot observables: {e}")
+
+    # 5. Training loss
+    try:
+        plot_training_loss(losses)
+    except Exception as e:
+        print(f"  Warning: failed to plot training loss: {e}")
