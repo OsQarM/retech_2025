@@ -16,8 +16,6 @@ Array = jnp.ndarray
 
 sys.path.append('./')
 
-from diagnostics import print_linblad_info
-
 def paulis(dtype=jnp.complex64):
     '''Creates single-qubit basis operators'''
     sx = jnp.array([[0., 1.],[1., 0.]], dtype=dtype)
@@ -84,7 +82,6 @@ def general_local_zz_basis(L, sx, sy, sz, id2, dtype=jnp.complex64):
         ops_out.append(kron_n(ops))
     
     return ops_out
-
 
 def make_observables(L):
     sx, sy, sz, id2 = paulis()
@@ -324,8 +321,6 @@ def define_dynamics(config, theta_true, params_true):
             raise ValueError(f"T1_list and T2_list must have length L={L}")
             
         jump_ops, jump_rates = build_lindblad_operators(L, T1_list, T2_list)
-        print_linblad_info(L, T1_list, T2_list, noise_model)
-
         
         params_true["jump_operators"] = jump_ops
         params_true["jump_rates"] = jump_rates
@@ -336,4 +331,4 @@ def define_dynamics(config, theta_true, params_true):
     else:
         raise ValueError(f"Unknown dynamics_type: {dynamics_type}")
     
-    return rhs_fun, params_true
+    return rhs_fun, params_true, T1_list, T2_list

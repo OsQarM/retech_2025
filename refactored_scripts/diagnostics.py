@@ -72,7 +72,6 @@ def print_linblad_info(L, T1_list, T2_list, noise_model):
     print(f"  γ_damping per qubit: {[f'{g:.4f}' for g in gamma_damp_list]}")
     return
 
-
 def print_hamiltonian_parameters(config, hamiltonian_type, theta_final, nn_l2_norm):
     # Print Hamiltonian parameters
     L = config['L']

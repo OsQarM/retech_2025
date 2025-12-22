@@ -20,7 +20,7 @@ sys.path.append('./')
 from model_building import get_theta_shape, build_xyz_basis, get_theta_true_from_config, prepare_initial_state, define_dynamics
 from time_evolution import evolve_trajectory
 from data_saving import save_data_to_files
-from diagnostics import print_data_info
+from diagnostics import print_data_info, print_linblad_info
 from sampling import sample_bitstrings_from_trajectory
 
 Array = jnp.ndarray
@@ -41,6 +41,7 @@ def generate_dataset(config, OPS_XYZ=None):
     seed = config["seed_data"]
     dynamics_type = config.get("dynamics_type", "schrodinger")
     hamiltonian_type = config.get("hamiltonian_type", "uniform_xyz")
+    noise_model = config.get("noise_model", "global")
     
     # Get true Hamiltonian parameters
     theta_true = get_theta_true_from_config(config)
@@ -72,7 +73,10 @@ def generate_dataset(config, OPS_XYZ=None):
     }
     
     # Choose dynamics
-    rhs_fun, params_true = define_dynamics(config, theta_true, params_true)
+    rhs_fun, params_true, T1_list, T2_list = define_dynamics(config, theta_true, params_true)
+
+    if dynamics_type == "lindblad":
+        print_linblad_info(L, T1_list, T2_list, noise_model)
     
     # Evolve
     print("Calculating trajectory...")
