@@ -976,6 +976,8 @@ if __name__ == "__main__":
     print(f"\n{'='*60}")
     print(f"FINAL RESULTS")
     print(f"{'='*60}")
+
+
     
     # Print Hamiltonian parameters
     if hamiltonian_type == "uniform_xyz":

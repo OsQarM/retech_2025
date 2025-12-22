@@ -12,7 +12,7 @@ import sys
 sys.path.append('./')
 
 
-def print_run_info(config, expected_shape):
+def print_data_info(config, expected_shape):
     '''Print relevant information about data generation'''
     print("="*60)
     print("--- Running Data Generation ---")
@@ -27,6 +27,30 @@ def print_run_info(config, expected_shape):
     # Print parameter information
     print(f"Expected parameter count: {expected_shape}")
     return
+
+def print_training_info(config, num_coefficients):
+
+    print(f"\n{'='*60}")
+    print(f"MODEL configURATION")
+    print(f"{'='*60}")
+    print(f"  Dynamics: {'Lindblad (noisy)' if config["use_noisy_dynamics"] else 'Schrödinger (noiseless)'}")
+
+
+    print(f"  Hamiltonian type: {config["hamiltonian_type"]}")
+    print(f"  Hamiltonian parameters: {num_coefficients}")
+    print(f"  Model type: {config['MODEL_TYPE']}")
+    print(f"  Learn θ: {config['learn_theta']}")
+
+    if config["use_noisy_dynamics"]:
+        print(f"  Learn noise: {config['learn_noise_params']}")
+        print(f"  Noise model: {config['noise_model']}")
+        if config['noise_model'] == 'global':
+            print(f"    → 2 noise parameters total")
+        else:
+            print(f"    → {2*config['L']} noise parameters (2 per qubit)")
+    return
+
+
 
 def print_linblad_info(L, T1_list, T2_list, noise_model):
 

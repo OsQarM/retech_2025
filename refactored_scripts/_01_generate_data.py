@@ -20,7 +20,7 @@ sys.path.append('./')
 from model_building import get_theta_shape, build_xyz_basis, get_theta_true_from_config, prepare_initial_state, define_dynamics
 from time_evolution import evolve_trajectory
 from data_saving import save_data_to_files
-from diagnostics import print_run_info
+from diagnostics import print_data_info
 from sampling import sample_bitstrings_from_trajectory
 
 Array = jnp.ndarray
@@ -103,7 +103,7 @@ if __name__ == "__main__":
 
     expected_shape = get_theta_shape(L, hamiltonian_type)
 
-    print_run_info(CONFIG, expected_shape)
+    print_data_info(CONFIG, expected_shape)
 
     # Build operators based on hamiltonian_type
     OPS_XYZ = build_xyz_basis(L, hamiltonian_type)
