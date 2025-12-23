@@ -32,7 +32,6 @@ def config_to_dataframe(config_dict):
     return pd.DataFrame([data])
 
 def save_data_to_files(t_grid, counts, L, T_max, R_shots, J_steps, 
-                       
                        theta_true, state0, config_dict):
     dynamics_type = config_dict.get("dynamics_type", "schrodinger")
     noise_model = config_dict.get("noise_model", "global")
@@ -72,7 +71,9 @@ def save_data_to_files(t_grid, counts, L, T_max, R_shots, J_steps,
     metadata_dict = {
         'L': L,
         'initial_state': state0_vector,
-        'theta_true': theta_true
+        'theta_true': theta_true,
+        'dynamics_type': dynamics_type,
+        'noise_model': noise_model
     }
     
     # Add noise parameters if applicable
@@ -89,20 +90,47 @@ def save_data_to_files(t_grid, counts, L, T_max, R_shots, J_steps,
             T2_list = config_dict.get("T2_list", [5.0] * L)
             metadata_dict['T1_list'] = np.array(T1_list)
             metadata_dict['T2_list'] = np.array(T2_list)
-            gamma_deph_list = [1.0/T2_list[i] - 1.0/(2*T1_list[i]) for i in range(L)]
-            gamma_damp_list = [1.0/T1_list[i] for i in range(L)]
+            
+            # Calculate rates
+            gamma_deph_list = []
+            gamma_damp_list = []
+            for i in range(L):
+                gamma_damp = 1.0/T1_list[i] if T1_list[i] > 0 else 0.0
+                gamma_deph = max(1.0/T2_list[i] - 1.0/(2*T1_list[i]), 0.0) if T1_list[i] > 0 and T2_list[i] > 0 else 0.0
+                gamma_deph_list.append(gamma_deph)
+                gamma_damp_list.append(gamma_damp)
+            
             metadata_dict['gamma_dephasing_list_true'] = np.array(gamma_deph_list)
             metadata_dict['gamma_damping_list_true'] = np.array(gamma_damp_list)
     
     np.savez(output_filename_metadata, **metadata_dict)
     
-    # Save config
+    # Save config - ensure noise parameters are included
     df_config = config_to_dataframe(copy.deepcopy(config_dict))
+    
+    # Explicitly add noise parameters to CSV for easier reading
+    if dynamics_type == "lindblad":
+        if noise_model == "global":
+            df_config['T1_global'] = T1
+            df_config['T2_global'] = T2
+        else:
+            df_config['T1_list'] = str(T1_list)
+            df_config['T2_list'] = str(T2_list)
+    
     df_config.to_csv(output_filename_config_df, index=False)
     
     print(f"\n✅ Data saved:")
     print(f"   Counts: {output_filename_counts}")
     print(f"   Metadata: {output_filename_metadata}")
     print(f"   Config: {output_filename_config_df}")
+    
+    # Print noise summary
+    if dynamics_type == "lindblad":
+        print(f"\n📊 Noise parameters saved:")
+        if noise_model == "global":
+            print(f"   Global: T1={T1:.2f}, T2={T2:.2f}")
+        else:
+            print(f"   Local - T1 per qubit: {T1_list}")
+            print(f"   Local - T2 per qubit: {T2_list}")
     
     return output_filename_counts, output_filename_metadata, output_filename_config_df

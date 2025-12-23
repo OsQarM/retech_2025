@@ -55,9 +55,59 @@ def load_experimental_data(config):
         metadata = np.load(f"experimental_data_{file_core}_metadata.npz")
         initial_state_vector = metadata["initial_state"]
         theta_true_array = metadata["theta_true"]
-    except:
+        
+        # Read noise parameters from metadata
+        dynamics_type = df_config["dynamics_type"] if "dynamics_type" in df_config else "schrodinger"
+        noise_model = df_config.get("noise_model", "global")
+        
+        if dynamics_type == "lindblad":
+            config["data_has_noise"] = True
+            config["noise_model"] = noise_model
+            
+            if noise_model == "global":
+                if 'T1_global' in metadata and 'T2_global' in metadata:
+                    T1_true = float(metadata['T1_global'])
+                    T2_true = float(metadata['T2_global'])
+                    config["T1_global_true"] = T1_true
+                    config["T2_global_true"] = T2_true
+                    gamma_deph_true = 1.0/T2_true - 1.0/(2*T1_true)
+                    gamma_damp_true = 1.0/T1_true
+                    print(f"  Global noise: T1={T1_true:.2f}, T2={T2_true:.2f}")
+                    print(f"  Rates: γ_deph={gamma_deph_true:.4f}, γ_damp={gamma_damp_true:.4f}")
+                    config["gamma_deph_true"] = gamma_deph_true
+                    config["gamma_damp_true"] = gamma_damp_true
+            else:  # local noise
+                if 'T1_list' in metadata and 'T2_list' in metadata:
+                    T1_list_true = list(metadata['T1_list'])
+                    T2_list_true = list(metadata['T2_list'])
+                    config["T1_list_true"] = T1_list_true
+                    config["T2_list_true"] = T2_list_true
+                    
+                    # Calculate rates
+                    gamma_deph_list = [1.0/T2_list_true[i] - 1.0/(2*T1_list_true[i]) for i in range(L)]
+                    gamma_damp_list = [1.0/T1_list_true[i] for i in range(L)]
+                    config["gamma_deph_list_true"] = gamma_deph_list
+                    config["gamma_damp_list_true"] = gamma_damp_list
+                    
+                    print(f"  Local noise - Per-qubit T1: {T1_list_true}")
+                    print(f"  Local noise - Per-qubit T2: {T2_list_true}")
+                    
+                    # Calculate average for display
+                    avg_T1 = np.mean(T1_list_true)
+                    avg_T2 = np.mean(T2_list_true)
+                    avg_gamma_deph = np.mean(gamma_deph_list)
+                    avg_gamma_damp = np.mean(gamma_damp_list)
+                    print(f"  Averages: T1={avg_T1:.2f}, T2={avg_T2:.2f}")
+                    print(f"  Average rates: γ_deph={avg_gamma_deph:.4f}, γ_damp={avg_gamma_damp:.4f}")
+        else:
+            config["data_has_noise"] = False
+            print(f"  Data generated with Schrödinger dynamics (noiseless)")
+            
+    except Exception as e:
+        print(f"  Warning loading metadata: {e}")
         initial_state_vector = None
         theta_true_array = None
+        config["data_has_noise"] = False
     
     # Update config from data
     config["N_time_shots"] = int(df_config["N_time_shots"])
@@ -70,27 +120,13 @@ def load_experimental_data(config):
                   f"differs from data '{data_ham_type}'")
             config["hamiltonian_type"] = data_ham_type
     
-    # Check if data was generated with noise
-    data_has_noise = False
-    if "dynamics_type" in df_config:
-        data_has_noise = (df_config["dynamics_type"] == "lindblad")
-        if data_has_noise:
-            print(f"  Data generated with Lindblad dynamics (noisy)")
-            if "T1" in df_config and "T2" in df_config:
-                T1_true = float(df_config["T1"])
-                T2_true = float(df_config["T2"])
-                print(f"  True noise: T1={T1_true:.2f}, T2={T2_true:.2f}")
-                gamma_deph_true = 1.0/T2_true - 1.0/(2*T1_true)
-                gamma_damp_true = 1.0/T1_true
-                print(f"  Corresponding rates: γ_deph={gamma_deph_true:.4f}, γ_damp={gamma_damp_true:.4f}")
-                config["gamma_deph_true"] = gamma_deph_true
-                config["gamma_damp_true"] = gamma_damp_true
-        else:
-            print(f"  Data generated with Schrödinger dynamics (noiseless)")
+    # Check if model matches data noise type
+    use_noisy_model = config["use_noisy_dynamics"]
+    data_has_noise = config.get("data_has_noise", False)
     
-    if data_has_noise and not config["use_noisy_dynamics"]:
+    if data_has_noise and not use_noisy_model:
         print(f"  ⚠️  WARNING: Data is noisy but model uses noiseless dynamics!")
-    elif not data_has_noise and config["use_noisy_dynamics"]:
+    elif not data_has_noise and use_noisy_model:
         print(f"  ⚠️  WARNING: Data is noiseless but model uses noisy dynamics!")
     
     # Load true Hamiltonian parameters
@@ -282,21 +318,36 @@ if __name__ == "__main__":
     # 2. Noise parameters (if applicable)
     if "noise_rates" in params:
         true_noise_rates = None
-        if "gamma_deph_true" in CONFIG and "gamma_damp_true" in CONFIG:
-            if CONFIG["noise_model"] == "global":
+        noise_model = CONFIG.get("noise_model", "global")
+        
+        # Extract true rates based on noise model
+        if noise_model == "global":
+            if "gamma_deph_true" in CONFIG and "gamma_damp_true" in CONFIG:
                 true_noise_rates = [CONFIG["gamma_deph_true"], CONFIG["gamma_damp_true"]]
-            else:
-                true_noise_rates = ([CONFIG["gamma_deph_true"]] * L + [CONFIG["gamma_damp_true"]] * L)
+        else:  # local noise model
+            if "gamma_deph_list_true" in CONFIG and "gamma_damp_list_true" in CONFIG:
+                # Concatenate dephasing rates first, then damping rates
+                true_noise_rates = np.concatenate([
+                    np.array(CONFIG["gamma_deph_list_true"]),
+                    np.array(CONFIG["gamma_damp_list_true"])
+                ])
+        
         # Learned noise rates (convert to numpy)
         try:
             learned_noise_rates = np.array(jax.device_get(params["noise_rates"]))
-        except Exception:
-            learned_noise_rates = None
-        try:
-            fig_noise = plot_noise_parameters(learned_noise_rates, true_noise_rates, CONFIG["noise_model"], L)
-            plt.show()
         except Exception as e:
-            print(f"  Warning: failed to plot noise parameters: {e}")
+            print(f"  Warning: failed to get learned noise rates: {e}")
+            learned_noise_rates = None
+        
+        # Plot noise parameters
+        if learned_noise_rates is not None:
+            try:
+                fig_noise = plot_noise_parameters(learned_noise_rates, true_noise_rates, noise_model, L)
+                plt.show()
+            except Exception as e:
+                print(f"  Warning: failed to plot noise parameters: {e}")
+        else:
+            print("  Warning: No learned noise rates to plot")
 
     
     # 3. Fidelity / Purity diagnostics
@@ -305,7 +356,7 @@ if __name__ == "__main__":
     if use_noisy: 
         try:
             # Mixed-state fidelity
-            traj_model_np, traj_van_np = plot_mixed_state_fidelity(traj_model, traj_vanilla, traj_true, CONFIG, t_grid_long)
+            traj_model_np, traj_van_np = plot_mixed_state_fidelity(traj_model, traj_vanilla, traj_true, CONFIG, t_grid_long, L)
             # Purity trajectories
             plot_purity(traj_model_np, traj_van_np, t_grid_long, CONFIG)
         except Exception as e:

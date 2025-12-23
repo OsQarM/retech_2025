@@ -59,7 +59,9 @@ def plot_hamiltonian_parameters(theta_true, theta_init, theta_final, hamiltonian
 def plot_noise_parameters(learned_rates, true_rates, noise_model, L):
     """Plot learned vs true noise rates"""
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 5))
-    
+    learned_rates = [abs(i) for i in learned_rates]
+    true_rates = [abs(i) for i in true_rates]
+
     if noise_model == "global":
         # Single rate for all qubits
         labels = ['Global']
@@ -69,26 +71,26 @@ def plot_noise_parameters(learned_rates, true_rates, noise_model, L):
         if true_rates is not None:
             ax1.bar([x[0] - width/2], [true_rates[0]], width, 
                    label='True', alpha=0.8, color='green')
-        ax1.bar([x[0] + width/2], [learned_rates[0]], width,
-               label='Learned', alpha=0.8, color='red')
-        ax1.set_xticks(x)
-        ax1.set_xticklabels(labels)
-        ax1.set_ylabel('Dephasing Rate γ_z')
-        ax1.set_title('Dephasing Rates')
-        ax1.legend()
-        ax1.grid(True, alpha=0.3)
+            ax1.bar([x[0] + width/2], [learned_rates[0]], width,
+                label='Learned', alpha=0.8, color='red')
+            ax1.set_xticks(x)
+            ax1.set_xticklabels(labels)
+            ax1.set_ylabel('Dephasing Rate γ_z')
+            ax1.set_title('Dephasing Rates')
+            ax1.legend()
+            ax1.grid(True, alpha=0.3)
         
         if true_rates is not None:
             ax2.bar([x[0] - width/2], [true_rates[1]], width,
                    label='True', alpha=0.8, color='green')
-        ax2.bar([x[0] + width/2], [learned_rates[1]], width,
-               label='Learned', alpha=0.8, color='red')
-        ax2.set_xticks(x)
-        ax2.set_xticklabels(labels)
-        ax2.set_ylabel('Damping Rate γ_m')
-        ax2.set_title('Damping Rates')
-        ax2.legend()
-        ax2.grid(True, alpha=0.3)
+            ax2.bar([x[0] + width/2], [learned_rates[1]], width,
+                label='Learned', alpha=0.8, color='red')
+            ax2.set_xticks(x)
+            ax2.set_xticklabels(labels)
+            ax2.set_ylabel('Damping Rate γ_m')
+            ax2.set_title('Damping Rates')
+            ax2.legend()
+            ax2.grid(True, alpha=0.3)
         
     else:  # local
         labels = [f'Q{i}' for i in range(L)]
@@ -98,32 +100,32 @@ def plot_noise_parameters(learned_rates, true_rates, noise_model, L):
         if true_rates is not None and len(true_rates) >= 2*L:
             ax1.bar(x - width/2, true_rates[:L], width,
                    label='True', alpha=0.8, color='green')
-        ax1.bar(x + width/2, learned_rates[:L], width,
-               label='Learned', alpha=0.8, color='red')
-        ax1.set_xticks(x)
-        ax1.set_xticklabels(labels)
-        ax1.set_ylabel('Dephasing Rate γ_z')
-        ax1.set_title('Dephasing Rates (Per Qubit)')
-        ax1.legend()
-        ax1.grid(True, alpha=0.3)
+            ax1.bar(x + width/2, learned_rates[:L], width,
+                label='Learned', alpha=0.8, color='red')
+            ax1.set_xticks(x)
+            ax1.set_xticklabels(labels)
+            ax1.set_ylabel('Dephasing Rate γ_z')
+            ax1.set_title('Dephasing Rates (Per Qubit)')
+            ax1.legend()
+            ax1.grid(True, alpha=0.3)
         
         if true_rates is not None and len(true_rates) >= 2*L:
             ax2.bar(x - width/2, true_rates[L:2*L], width,
                    label='True', alpha=0.8, color='green')
-        ax2.bar(x + width/2, learned_rates[L:2*L], width,
-               label='Learned', alpha=0.8, color='red')
-        ax2.set_xticks(x)
-        ax2.set_xticklabels(labels)
-        ax2.set_ylabel('Damping Rate γ_m')
-        ax2.set_title('Damping Rates (Per Qubit)')
-        ax2.legend()
-        ax2.grid(True, alpha=0.3)
+            ax2.bar(x + width/2, learned_rates[L:2*L], width,
+                label='Learned', alpha=0.8, color='red')
+            ax2.set_xticks(x)
+            ax2.set_xticklabels(labels)
+            ax2.set_ylabel('Damping Rate γ_m')
+            ax2.set_title('Damping Rates (Per Qubit)')
+            ax2.legend()
+            ax2.grid(True, alpha=0.3)
     
     plt.tight_layout()
     return fig
 
 
-def plot_mixed_state_fidelity(traj_model, traj_vanilla, traj_true, config, t_grid_long):
+def plot_mixed_state_fidelity(traj_model, traj_vanilla, traj_true, config, t_grid_long, L):
 
        traj_model_np = np.array(jax.device_get(traj_model))
        traj_van_np = np.array(jax.device_get(traj_vanilla))

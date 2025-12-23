@@ -21,7 +21,7 @@ Array = jnp.ndarray
 # ============================================================
 CONFIG = {
     # SYSTEM DEFINITION & DATA SAMPLING PARAMETERS
-    "L": 6,                      # Number of qubits (N spins).
+    "L": 3,                      # Number of qubits (N spins).
     "t_max": 1.0,                # Total time evolution (in units of ħ).
     "dt": 0.01,                  # RK4 Integration time step.
     "N_time_shots": 101,         # Number of discrete measurement points (J).

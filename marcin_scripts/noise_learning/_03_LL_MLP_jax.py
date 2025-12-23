@@ -21,7 +21,7 @@ Array = jnp.ndarray
 # ============================================================
 CONFIG = {
     # SYSTEM PARAMETERS
-    "L": 4,
+    "L": 3,
     "t_max": 1.0,
     "initial_state_kind": "all_plus",
     
