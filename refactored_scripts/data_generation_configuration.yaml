@@ -26,15 +26,15 @@ hz_list_true: [0.65, 0.2, 0.15, 0.43, 1.2, 0.33]
 Jzz_list_true: [0.4, 0.25, 0.1, 0.8, 0.22]
 
 # DYNAMICS TYPE
-dynamics_type: "schrodinger"  # "schrodinger" or "lindblad"
+dynamics_type: "lindblad"  # "schrodinger" or "lindblad"
 
 # NOISE MODEL
 noise_model: "global" # "global" (same for all qubits) or "local" (per-qubit)
 
 # NOISE PARAMETERS
 # For "global" noise model:
-T1_global: 10.0
-T2_global: 5.0
+T1_global: 1000.0
+T2_global: 500.0
 
 # For "local" noise model (per-qubit T1 and T2):
 T1_list: [10.0, 10.0, 10.0]   # T1 for each qubit of length L

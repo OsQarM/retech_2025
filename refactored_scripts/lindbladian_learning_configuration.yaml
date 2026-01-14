@@ -10,8 +10,8 @@ initial_state_kind: "all_plus"
 hamiltonian_type: "general_local_zz"  # "uniform_xyz" or "general_local_zz"
 
 # NOISE SETTINGS
-use_noisy_dynamics: false  # Set to True to use Lindblad dynamics
-learn_noise_params: false   # Whether to learn noise rates
+use_noisy_dynamics: True  # Set to True to use Lindblad dynamics
+learn_noise_params: True   # Whether to learn noise rates
 noise_model: "global"       # "global" (2 params) or "local" (2L params)
 
 # Initial guesses for noise (used if learn_noise_params=True)
@@ -32,9 +32,9 @@ Jz_init: 0.5
 hx_init: 0.0 
 hy_init: 0.0 
 hz_init: 0.5
-hx_list_init: [0,0,0,0,0,0] #Has to be of length L
+hx_list_init: [0.5,0.5,0.5,0.5,0.5,0.5] #Has to be of length L
 hz_list_init: [0,0,0,0,0,0] #Has to be of length L
-Jzz_list_init: [0,0,0,0,0]  #Has to be of length L -1
+Jzz_list_init: [0.5,0.5,0.5,0.5,0.5]  #Has to be of length L -1
 INIT_PERTURB_SCALE: 0.0
 
 # NDE ARCHITECTURE
@@ -48,6 +48,6 @@ PHASE1_SPLIT: 0.4
 PHASE2_SPLIT: 0.4
 PHASE3_SPLIT: 0.2
 lambda_reg: 0.1
-noise_reg: 0.0001  # Regularization for noise parameters
+noise_reg: 0.001  # Regularization for noise parameters
 seed_init: 4321
 T_extrapolate_factor: 5.0
