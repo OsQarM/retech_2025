@@ -1,6 +1,6 @@
 # config.yaml
 
-L: 6
+L: 4
 t_max: 1.0
 dt: 0.01
 N_time_shots: 101
@@ -9,7 +9,7 @@ initial_state_kind: "all_plus"
 seed_data: 1234
 
 # HAMILTONIAN TYPE
-hamiltonian_type: "general_local_zz"  # "uniform_xyz" or "general_local_zz"
+hamiltonian_type: "uniform_xyz"  # "uniform_xyz" or "general_local_zz"
 
 # TRUE HAMILTONIAN PARAMETERS
 # For "uniform_xyz":
@@ -26,7 +26,7 @@ hz_list_true: [0.65, 0.2, 0.15, 0.43, 1.2, 0.33]
 Jzz_list_true: [0.4, 0.25, 0.1, 0.8, 0.22]
 
 # DYNAMICS TYPE
-dynamics_type: "lindblad"  # "schrodinger" or "lindblad"
+dynamics_type: "schrodinger"  # "schrodinger" or "lindblad"
 
 # NOISE MODEL
 noise_model: "global" # "global" (same for all qubits) or "local" (per-qubit)

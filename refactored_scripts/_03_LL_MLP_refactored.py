@@ -172,11 +172,6 @@ if __name__ == "__main__":
     
     # Load data
     t_grid_shots, counts_shots, initial_state_vector, theta_true_array = load_experimental_data(CONFIG)
-    
-
-    print(t_grid_shots)
-
-    exit()
 
     L = CONFIG["L"]
     dim = 2**L

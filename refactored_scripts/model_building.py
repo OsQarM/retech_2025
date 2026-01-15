@@ -302,6 +302,7 @@ def define_dynamics(config, theta_true, params_true):
         rhs_fun = schrodinger_rhs
         print(f"Using Schrödinger dynamics (noiseless)")
         print(f"Hamiltonian: {hamiltonian_type} ({len(theta_true)} params)")
+        T1_list, T2_list = [], []
         
     elif dynamics_type == "lindblad":
 

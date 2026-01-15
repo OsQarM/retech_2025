@@ -2,16 +2,16 @@
 
 
 # SYSTEM PARAMETERS
-L: 6
+L: 4
 t_max: 1.0
 initial_state_kind: "all_plus"
 
 # HAMILTONIAN MODEL
-hamiltonian_type: "general_local_zz"  # "uniform_xyz" or "general_local_zz"
+hamiltonian_type: "uniform_xyz"  # "uniform_xyz" or "general_local_zz"
 
 # NOISE SETTINGS
-use_noisy_dynamics: True  # Set to True to use Lindblad dynamics
-learn_noise_params: True   # Whether to learn noise rates
+use_noisy_dynamics: False  # Set to True to use Lindblad dynamics
+learn_noise_params: False   # Whether to learn noise rates
 noise_model: "global"       # "global" (2 params) or "local" (2L params)
 
 # Initial guesses for noise (used if learn_noise_params=True)

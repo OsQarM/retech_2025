@@ -215,7 +215,14 @@ def nde_loss_schrodinger(params, L, OPS_XYZ, NN_MAP_FUN, NN_MODEL_TYPE, MODEL_TY
     probs = probs / probs.sum(axis=1, keepdims=True)
     probs = jnp.clip(probs, 1e-9, 1.0)
     logp = jnp.log(probs)
-    ll = jnp.sum(counts_shots * logp)
+
+    if counts_shots.ndim == 1:
+        logp_final = logp[-1, :]
+    else:
+        logp_final = logp
+    ll = jnp.sum(counts_shots * logp_final)
+
+    #ll = jnp.sum(counts_shots * logp)
     loss_nll = -ll / jnp.sum(counts_shots)
     
     # Regularization
@@ -224,7 +231,6 @@ def nde_loss_schrodinger(params, L, OPS_XYZ, NN_MAP_FUN, NN_MODEL_TYPE, MODEL_TY
     total_loss = loss_nll + lambda_reg * reg_nn
     
     return total_loss, (loss_nll, reg_nn, 0.0, psi_traj)
-
 
 def nde_loss_lindblad(params, L, OPS_XYZ, NN_MAP_FUN, NN_MODEL_TYPE, MODEL_TYPE,
                       hamiltonian_type, lambda_reg, noise_reg, t_grid_shots, rho0,
