@@ -248,3 +248,26 @@ def plot_training_loss(losses):
        plt.ylabel("Loss")
        plt.grid(True)
        plt.show()
+
+
+def plot_final_probabilities(bitstrings, counts_shots, probs_model, probs_vanilla, labels = None):
+
+    sum_counts = sum(counts_shots)
+    counts_shots = [i/sum_counts for i in counts_shots]
+    
+    fig, ax = plt.subplots(figsize=(10, 5))
+    
+    x = np.arange(len(bitstrings))
+    width = 0.25
+    
+    ax.bar(x - width, counts_shots, width, label=labels[0] if labels else 'Data 1', alpha=0.7)
+    ax.bar(x, probs_model, width, label=labels[1] if labels else 'Data 2', alpha=0.7)
+    ax.bar(x + width, probs_vanilla, width, label=labels[2] if labels else 'Data 3', alpha=0.7)
+    
+    ax.set_xticks(x)
+    ax.set_xticklabels(bitstrings, rotation=45, ha='right')
+    ax.legend()
+    ax.grid(axis='y', alpha=0.3)
+    
+    plt.tight_layout()
+    plt.show()

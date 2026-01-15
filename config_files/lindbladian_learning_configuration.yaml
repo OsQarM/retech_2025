@@ -3,15 +3,16 @@
 
 # SYSTEM PARAMETERS
 L: 4
+bond_dimension: 5
 t_max: 1.0
-initial_state_kind: "all_plus"
+initial_state_kind: "all_zeros" # "all_zeros" or "all_plus"
 
 # HAMILTONIAN MODEL
 hamiltonian_type: "general_local_zz"  # "uniform_xyz" or "general_local_zz"
 
 # NOISE SETTINGS
-use_noisy_dynamics: True  # Set to True to use Lindblad dynamics
-learn_noise_params: True   # Whether to learn noise rates
+use_noisy_dynamics: False  # Set to True to use Lindblad dynamics
+learn_noise_params: False  # Whether to learn noise rates
 noise_model: "global"       # "global" (2 params) or "local" (2L params)
 
 # Initial guesses for noise (used if learn_noise_params=True)
@@ -21,9 +22,9 @@ gamma_damping_init: 0    # Initial damping rate (global or per-qubit)
 
 # TRAINING PARAMETERS
 dt: 0.01
-N_epochs: 500
+N_epochs: 1000
 learning_rate: 0.01
-print_every: 20
+print_every: 100
 
 # HAMILTONIAN INITIAL GUESS
 Jx_init: 0.5 
@@ -32,9 +33,9 @@ Jz_init: 0.5
 hx_init: 0.0 
 hy_init: 0.0 
 hz_init: 0.5
-hx_list_init: [0.5,0.5,0.5,0.5,0.5,0.5] #Has to be of length L
-hz_list_init: [0,0,0,0,0,0] #Has to be of length L
-Jzz_list_init: [0.5,0.5,0.5,0.5,0.5]  #Has to be of length L -1
+hx_list_init: [0.5, 0.5, 0.5, 0.5] #Has to be of length L
+hz_list_init: [0, 0, 0] #Has to be of length L
+Jzz_list_init: [0.5, 0.5, 0.5, 0.5]  #Has to be of length L -1
 INIT_PERTURB_SCALE: 0.0
 
 # NDE ARCHITECTURE

@@ -231,3 +231,32 @@ def generate_diagnostic_trajectories(config, OPS_XYZ, NN_MAP_FUN, dephasing_ops,
         obs_true = calculate_observables_pure(traj_true, obs_dict) if traj_true is not None else None
     
     return traj_model, traj_vanilla, traj_true, obs_true, obs_model, obs_vanilla
+
+
+def extract_learned_mps_ham_probs(config, OPS_XYZ, NN_MAP_FUN, state0, t_grid, params):
+    L = config['L']
+    hamiltonian_type = config['hamiltonian_type']
+
+    # Noiseless dynamics
+    rhs_model = make_rhs_schrodinger(L, OPS_XYZ, NN_MAP_FUN, config["NN_MODEL_TYPE"],
+                                    config["MODEL_TYPE"], hamiltonian_type)
+    traj_model = evolve_trajectory(state0, t_grid, rhs_model, params)
+    
+    # Vanilla (theta only)
+    params_vanilla = {"theta": params["theta"],
+                        "nn": jtu.tree_map(jnp.zeros_like, params["nn"])}
+    traj_vanilla = evolve_trajectory(state0, t_grid, rhs_model, params_vanilla)
+    
+    # Negative log-likelihood
+    probs_model = jnp.abs(traj_model)**2
+    probs_model = probs_model / probs_model.sum(axis=1, keepdims=True)
+    probs_model = jnp.clip(probs_model, 1e-9, 1.0)
+    probs_model = probs_model[-1, :]
+
+    probs_vanilla = jnp.abs(traj_vanilla)**2
+    probs_vanilla = probs_vanilla / probs_vanilla.sum(axis=1, keepdims=True)
+    probs_vanilla = jnp.clip(probs_vanilla, 1e-9, 1.0)
+    probs_vanilla = probs_vanilla[-1, :]
+
+    return probs_model, probs_vanilla
+

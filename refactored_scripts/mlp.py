@@ -216,6 +216,7 @@ def nde_loss_schrodinger(params, L, OPS_XYZ, NN_MAP_FUN, NN_MODEL_TYPE, MODEL_TY
     probs = jnp.clip(probs, 1e-9, 1.0)
     logp = jnp.log(probs)
 
+    #In case we only have measurements of the last timestamp
     if counts_shots.ndim == 1:
         logp_final = logp[-1, :]
     else:
