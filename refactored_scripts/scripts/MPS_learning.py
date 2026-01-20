@@ -17,6 +17,7 @@ from diagnostics import print_training_info, print_hamiltonian_parameters, print
 from mlp import init_mlp_params, mlp_forward, make_step_fn, train_phase
 from figures import plot_noise_parameters, plot_hamiltonian_parameters, plot_mixed_state_fidelity
 from figures import plot_purity, plot_pure_state_fidelity, plot_observables, plot_training_loss, plot_final_probabilities
+from operators import OperatorClass
 
 Array = jnp.ndarray
 
@@ -81,14 +82,30 @@ if __name__ == "__main__":
     # Prepare initial state
     state0 = prepare_initial_state(L, CONFIG["initial_state_kind"], 
                                     as_density_matrix=use_noisy)
+    
 
-    # Build operators
-    OPS_XYZ = build_xyz_basis(L, hamiltonian_type)            #Will add class instead that initializes empty H
-    #Then call a series of functions to add basis terms (the ones we desire for our anatz)
-    #Then extract num coefficients from the H we have created
-    NUM_COEFFICIENTS = get_theta_shape(L, hamiltonian_type)
+    
+    if hamiltonian_type == 'uniform_xyz' or hamiltonian_type == 'general_local_zz':
+        # Build operators
+        OPS_XYZ = build_xyz_basis(L, hamiltonian_type)           
+        #Then call a series of functions to add basis terms (the ones we desire for our anatz)
+        #Then extract num coefficients from the H we have created
+        NUM_COEFFICIENTS = get_theta_shape(L, hamiltonian_type)
 
-    ###then we have to create a theta list with all the initial parameters
+    elif hamiltonian_type == 'custom':
+        #Optional:Create custom H with the desired terms
+        #then we have to create a theta list with all the initial parameters
+        OPS_H = OperatorClass(L)
+        OPS_H.add_operators('X')
+        OPS_H.add_operators('Z')
+        OPS_H.add_operators('ZZ')
+
+        NUM_COEFFICIENTS = len(OPS_H)
+        print(f"Working with {NUM_COEFFICIENTS} Hamiltonian parameters")
+    else:
+        raise ValueError(f"Unknown hamiltonian_type: {hamiltonian_type}")
+
+    exit()
 
     # Build Lindblad operators if needed
     if use_noisy:
@@ -102,7 +119,6 @@ if __name__ == "__main__":
     t_max = CONFIG['t_max']
     dt = CONFIG['dt']
     t_grid_shots = np.linspace(0., t_max, int(t_max/dt) +1)
-
 
 
     # Initialize NN
@@ -123,6 +139,9 @@ if __name__ == "__main__":
         theta_init_list = (list(CONFIG["hx_list_init"]) + 
                             list(CONFIG["hz_list_init"]) + 
                             list(CONFIG["Jzz_list_init"]))
+    elif hamiltonian_type == "custom":
+        theta_init_list = []
+
     else:
         raise ValueError(f"Unknown hamiltonian_type: {hamiltonian_type}")
 
