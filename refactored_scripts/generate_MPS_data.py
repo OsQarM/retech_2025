@@ -106,7 +106,7 @@ def save_sample_bitstrings(bitstrings, counts, prefix = None):
     #Create config file and save here L, chi, Nshots
     filename_core = f"L{N}_Chi_{chi}_R{N_shots}"
 
-    filename = f'experimental_data_{prefix}_{filename_core}_counts.csv'
+    filename = f'../data/experimental_data_{prefix}_{filename_core}_counts.csv'
 
     bitstrings_with_quotes = ["'" + bs for bs in bitstrings]
     
@@ -160,7 +160,7 @@ if __name__ == "__main__":
     if len(sys.argv) > 1:
         config_file = sys.argv[1]
     else:
-        config_file = "/Users/omichel/Desktop/qilimanjaro/projects/retech/retech_2025/config_files/data_generation_configuration.yaml"
+        config_file = "/Users/omichel/Desktop/qilimanjaro/projects/retech/retech_2025/refactored_scripts/config/MPS_data_generation.yml"
 
     #load configuration
     print(config_file)
