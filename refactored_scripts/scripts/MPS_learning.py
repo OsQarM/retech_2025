@@ -105,8 +105,6 @@ if __name__ == "__main__":
     else:
         raise ValueError(f"Unknown hamiltonian_type: {hamiltonian_type}")
 
-    exit()
-
     # Build Lindblad operators if needed
     if use_noisy:
         dephasing_ops, damping_ops = build_lindblad_operators(L)
@@ -128,7 +126,7 @@ if __name__ == "__main__":
 
     layer_sizes = [NN_INPUT_DIM] + CONFIG["NN_hidden_sizes"] + [NN_OUTPUT_DIM]
     key = random.PRNGKey(CONFIG["seed_init"])
-    key, k_nn, k_th, k_noise = random.split(key, 4)
+    key, k_nn, k_th, k_noise, k_init = random.split(key, 5)
     nn_params = init_mlp_params(layer_sizes, k_nn, scale=0.1)
 
     # Initialize Hamiltonian parameters
@@ -140,7 +138,7 @@ if __name__ == "__main__":
                             list(CONFIG["hz_list_init"]) + 
                             list(CONFIG["Jzz_list_init"]))
     elif hamiltonian_type == "custom":
-        theta_init_list = []
+        theta_init_list = jax.random.uniform(k_init, (NUM_COEFFICIENTS), dtype=jnp.float32)
 
     else:
         raise ValueError(f"Unknown hamiltonian_type: {hamiltonian_type}")
