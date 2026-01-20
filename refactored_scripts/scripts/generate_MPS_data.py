@@ -160,7 +160,7 @@ if __name__ == "__main__":
     if len(sys.argv) > 1:
         config_file = sys.argv[1]
     else:
-        config_file = "/Users/omichel/Desktop/qilimanjaro/projects/retech/retech_2025/refactored_scripts/config/MPS_data_generation.yml"
+        config_file = "/Users/omichel/Desktop/qilimanjaro/projects/retech/retech_2025/refactored_scripts/config/MPS_data_generation.yaml"
 
     #load configuration
     print(config_file)

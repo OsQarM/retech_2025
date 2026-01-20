@@ -75,7 +75,7 @@ if __name__ == "__main__":
 
     L = CONFIG["L"]
     dim = 2**L
-    hamiltonian_type = CONFIG["hamiltonian_type"]
+    hamiltonian_type = CONFIG["hamiltonian_type"] #Probably not necessary
     use_noisy = CONFIG["use_noisy_dynamics"]
 
     # Prepare initial state
@@ -83,8 +83,12 @@ if __name__ == "__main__":
                                     as_density_matrix=use_noisy)
 
     # Build operators
-    OPS_XYZ = build_xyz_basis(L, hamiltonian_type)
+    OPS_XYZ = build_xyz_basis(L, hamiltonian_type)            #Will add class instead that initializes empty H
+    #Then call a series of functions to add basis terms (the ones we desire for our anatz)
+    #Then extract num coefficients from the H we have created
     NUM_COEFFICIENTS = get_theta_shape(L, hamiltonian_type)
+
+    ###then we have to create a theta list with all the initial parameters
 
     # Build Lindblad operators if needed
     if use_noisy:
@@ -150,7 +154,14 @@ if __name__ == "__main__":
     T_extrap = CONFIG["t_max"] * CONFIG["T_extrapolate_factor"]
     t_grid_long = jnp.arange(0.0, T_extrap + 1e-12, CONFIG["dt"])
 
-    # Create step function
+    # Create step function (here we need to examine the shape of OPS)
+    #1. when createing xyz_hamiltonian from theta:
+        #params is a dictionary with one key that is theta
+        #theta is a list of lists that contains the starting parameters for all the qubits
+        #OPS_XYZ is a single list with all the operators for every qubit
+        #we build H by multiplying theta by OPS_XYZ
+    #2. When building NN part it doesn't care about structure, just number of coeffs
+
     step_fn = make_step_fn(CONFIG, L, OPS_XYZ, NN_MAP_FUN, use_noisy,
                             dephasing_ops, damping_ops)
 
