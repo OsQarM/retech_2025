@@ -111,11 +111,11 @@ def make_rhs_schrodinger(L, OPS_XYZ, NN_MAP_FUN, NN_MODEL_TYPE, MODEL_TYPE, hami
     def H_NN_time_dependent(nn_params, t):
         t_input = jnp.array([[t]])
         coeffs = NN_MAP_FUN(nn_params, t_input)[0]
-        num_ham_params = get_theta_shape(L, hamiltonian_type)
+        num_ham_params = len(OPS_XYZ)
         coeffs = coeffs[:num_ham_params]  # Only use Hamiltonian coefficients
         H_nn = jnp.zeros((dim, dim), dtype=jnp.complex64)
         for k in range(num_ham_params):
-            H_nn += coeffs[k] * OPS_XYZ[k]
+            H_nn += coeffs[k] * OPS_XYZ.operators[k]
         return H_nn
     
     def rhs_ode(t: float, psi: Array, params: dict):
@@ -141,11 +141,11 @@ def make_rhs_lindblad(L, OPS_XYZ, NN_MAP_FUN, NN_MODEL_TYPE, MODEL_TYPE, hamilto
     def H_NN_time_dependent(nn_params, t):
         t_input = jnp.array([[t]])
         nn_out = NN_MAP_FUN(nn_params, t_input)[0]
-        num_ham_params = get_theta_shape(L, hamiltonian_type)
+        num_ham_params = len(OPS_XYZ)
         coeffs = nn_out[:num_ham_params]
         H_nn = jnp.zeros((dim, dim), dtype=jnp.complex64)
         for k in range(num_ham_params):
-            H_nn += coeffs[k] * OPS_XYZ[k]
+            H_nn += coeffs[k] * OPS_XYZ.operators[k]
         return H_nn
     
     def extract_noise_rates(params):
