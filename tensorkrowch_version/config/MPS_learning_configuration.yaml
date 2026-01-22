@@ -10,6 +10,10 @@ initial_state_kind: "all_zeros" # "all_zeros" or "all_plus"
 # HAMILTONIAN MODEL
 hamiltonian_type: "custom"  # "uniform_xyz" or "general_local_zz" or "custom"
 
+x_fields: True
+y_fields: False
+z_fields: True
+
 # NOISE SETTINGS
 use_noisy_dynamics: False  # Set to True to use Lindblad dynamics
 learn_noise_params: False  # Whether to learn noise rates
@@ -19,6 +23,7 @@ noise_model: "global"       # "global" (2 params) or "local" (2L params)
 gamma_dephasing_init: 0   # Initial dephasing rate (global or per-qubit)
 gamma_damping_init: 0    # Initial damping rate (global or per-qubit)
 
+model: 'manual' # 'manual', 'pytorch', 'tensorkrowch'
 
 # TRAINING PARAMETERS
 dt: 0.01
