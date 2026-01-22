@@ -83,7 +83,6 @@ if __name__ == "__main__":
     state0 = prepare_initial_state(L, CONFIG["initial_state_kind"], 
                                     as_density_matrix=use_noisy)
     
-
     
     OPS_XYZ = OperatorClass(L)
     if hamiltonian_type == 'uniform_xyz' or hamiltonian_type == 'general_local_zz':

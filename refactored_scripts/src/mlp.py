@@ -19,7 +19,7 @@ import yaml
 sys.path.append('./')
 
 from model_building import xyz_hamiltonian_from_theta, get_theta_shape
-from time_evolution import evolve_trajectory, evolve_lindblad, vectorize_density_matrix, unvectorize_density_matrix
+from time_evolution import evolve_trajectory, evolve_lindblad, vectorize_density_matrix, unvectorize_density_matrix, apply_rotations
 
 Array = jnp.ndarray
 

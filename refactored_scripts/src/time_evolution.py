@@ -58,6 +58,10 @@ def rk4_step_lindblad(rho_vec, t, dt, rhs_fun, params, dim):
     return vectorize_density_matrix(rho_next)
 
 
+def apply_rotations(state0, params):
+    pass
+
+
 def evolve_trajectory(state0, t_grid, rhs_fun, params):
     '''
     Performs full time evolution of initial state according to specific differential equation (rhs_fun),
