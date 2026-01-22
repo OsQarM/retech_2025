@@ -155,14 +155,14 @@ def xyz_hamiltonian_from_theta(L: int, theta: Array, OPS_XYZ: list,
                                hamiltonian_type: str = "uniform_xyz") -> Array:
     '''Creates Hamiltonian from list of operators and corresponding weights'''
 
-    expected_shape = get_theta_shape(L, hamiltonian_type)
+    expected_shape = len(OPS_XYZ)
     
     if len(theta) != expected_shape or len(OPS_XYZ) != expected_shape:
         raise ValueError(f"Parameter/operator count mismatch")
     
     H = jnp.zeros((2**L, 2**L), dtype=jnp.complex64)
     for i in range(expected_shape):
-        H += theta[i] * OPS_XYZ[i]
+        H += theta[i] * OPS_XYZ.operators[i]
     
     return H
 
