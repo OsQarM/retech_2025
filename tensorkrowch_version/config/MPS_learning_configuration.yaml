@@ -3,7 +3,7 @@
 
 # SYSTEM PARAMETERS
 L: 4
-bond_dimension: 5
+bond_dimension: 2
 t_max: 1.0
 initial_state_kind: "all_zeros" # "all_zeros" or "all_plus"
 
