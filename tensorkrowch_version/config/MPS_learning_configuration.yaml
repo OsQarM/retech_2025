@@ -27,7 +27,7 @@ model: 'manual' # 'manual', 'pytorch', 'tensorkrowch'
 
 # TRAINING PARAMETERS
 dt: 0.01
-N_epochs: 1000
+N_epochs: 10
 learning_rate: 0.01
 print_every: 100
 
