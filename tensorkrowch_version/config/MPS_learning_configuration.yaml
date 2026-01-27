@@ -5,7 +5,7 @@
 L: 4
 bond_dimension: 2
 t_max: 1.0
-initial_state_kind: "all_zeros" # "all_zeros" or "all_plus"
+initial_state_kind: "all_plus" # "all_zeros" or "all_plus"
 
 # HAMILTONIAN MODEL
 hamiltonian_type: "custom"  # "uniform_xyz" or "general_local_zz" or "custom"
