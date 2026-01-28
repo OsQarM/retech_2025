@@ -2,17 +2,18 @@
 
 
 # SYSTEM PARAMETERS
-L: 4
-bond_dimension: 2
+L: 8
+bond_dimension_data: 16
+bond_dimension_learning: 1
 t_max: 1.0
-initial_state_kind: "all_plus" # "all_zeros" or "all_plus"
+initial_state_kind: "all_zeros" # "all_zeros" or "all_plus"
 
 # HAMILTONIAN MODEL
 hamiltonian_type: "custom"  # "uniform_xyz" or "general_local_zz" or "custom"
 
-x_fields: True
+x_fields: False
 y_fields: False
-z_fields: True
+z_fields: False
 
 # NOISE SETTINGS
 use_noisy_dynamics: False  # Set to True to use Lindblad dynamics
@@ -27,7 +28,7 @@ model: 'manual' # 'manual', 'pytorch', 'tensorkrowch'
 
 # TRAINING PARAMETERS
 dt: 0.01
-N_epochs: 10
+N_epochs: 3000
 learning_rate: 0.01
 print_every: 100
 
