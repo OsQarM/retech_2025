@@ -2,9 +2,9 @@
 
 
 # SYSTEM PARAMETERS
-L: 8
-bond_dimension_data: 16
-bond_dimension_learning: 1
+L: 6
+bond_dimension_data: 2
+bond_dimension_learning: 2
 t_max: 1.0
 initial_state_kind: "all_zeros" # "all_zeros" or "all_plus"
 
@@ -28,7 +28,7 @@ model: 'manual' # 'manual', 'pytorch', 'tensorkrowch'
 
 # TRAINING PARAMETERS
 dt: 0.01
-N_epochs: 3000
+N_epochs: 600
 learning_rate: 0.01
 print_every: 100
 

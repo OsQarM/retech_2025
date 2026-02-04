@@ -14,8 +14,14 @@ import glob
 import yaml
 import matplotlib.pyplot as plt
 
+
+
+#################################################################
+#PLOTS
+#################################################################
+
 def bar_plot_strings_comparison(strings, values1, values2, labels=None, 
-                                title="Comparison Bar Plot", xlabel="Bitstrings", 
+                                title="Learned bitstring probabilities", xlabel="Bitstrings", 
                                 ylabel="Probability", colors=None, edgecolor='black', 
                                 figsize=(12, 7), style='grouped', alpha=0.8):
     """
@@ -35,12 +41,9 @@ def bar_plot_strings_comparison(strings, values1, values2, labels=None,
         'grouped' for side-by-side bars, 'stacked' for stacked bars,
         'overlap' for overlapping transparent bars
     """
-
-    # values1 = values1.detach().numpy() if isinstance(values1, torch.Tensor) else values1
-    # values2 = values2.detach().numpy() if isinstance(values2, torch.Tensor) else values2
     
     if labels is None:
-        labels = ('Set 1', 'Set 2')
+        labels = ('True', 'Learned')
     if colors is None:
         colors = ('skyblue', 'salmon')
     
@@ -134,6 +137,16 @@ def bar_plot_strings_comparison(strings, values1, values2, labels=None,
     plt.show()
     
     return fig, ax, (bars1, bars2) if style != 'stacked' else (bars1, bars2)
+
+
+def plot_training_loss(n_epoch, losses):
+       plt.figure(figsize=(5,4))
+       plt.plot(list(range(1, n_epoch+1)), losses)
+       plt.title("Training Loss")
+       plt.xlabel("Epoch")
+       plt.ylabel("Loss")
+       plt.grid(True)
+       plt.show()
 
 
 def load_config(config_path):
@@ -630,7 +643,7 @@ if __name__ == "__main__":
     t_grid_fine = torch.arange(0.0, CONFIG["t_max"] + CONFIG["dt"]/2, CONFIG["dt"])
     learning_rate = CONFIG['learning_rate']
 
-    model, final_params, psi_final, loss = train_model(model, n_epochs, single_qubit_probs, psi0, OPS_LIST, CONFIG, t_grid_fine, learning_rate, counts_shots)
+    model, final_params, psi_final, loss_history = train_model(model, n_epochs, single_qubit_probs, psi0, OPS_LIST, CONFIG, t_grid_fine, learning_rate, counts_shots)
 
 
 
@@ -648,7 +661,12 @@ if __name__ == "__main__":
         diff+= abs(i-j)
     print("Total probability divergenge:", diff)
 
-    bar_plot_strings_comparison(bitstrings, probs_np, normalized_counts)
+    bar_plot_strings_comparison(bitstrings, normalized_counts, probs_np)
+
+    plot_training_loss(n_epochs, loss_history)
+
+    print(final_params)
+    
 
 
 
