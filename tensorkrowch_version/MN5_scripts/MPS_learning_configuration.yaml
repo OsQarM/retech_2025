@@ -2,7 +2,7 @@
 
 
 # SYSTEM PARAMETERS
-L: 4
+L: 8
 bond_dimension_data: 2
 bond_dimension_learning: 2
 t_max: 1.0
@@ -28,7 +28,7 @@ model: 'manual' # 'manual', 'pytorch', 'tensorkrowch'
 
 # TRAINING PARAMETERS
 dt: 0.01
-N_epochs: 600
+N_epochs: 300
 learning_rate: 0.01
 print_every: 100
 
@@ -51,10 +51,11 @@ NN_hidden_sizes: [64]
 learn_theta: True
 
 #MPO ACHITECTURE
-NN_TYPE: "mps" # mps or mpo
+NN_TYPE: "mpo" # mps or mpo
 MAX_MPO_CHI: 128
-MPO_SIZE: 64
-LINEAR_SIZE: 64
+MPO_SIZE: 125  #only 8, 27, 64, 125, 216, 343, 512, 729, 1000 when running with MPO_ON = True
+LINEAR_SIZE: 125 #same as MPO_SIZe when runnuing with MPO_ON = True
+MPO_ON: False
 
 # CURRICULUM
 PHASE1_SPLIT: 0.4

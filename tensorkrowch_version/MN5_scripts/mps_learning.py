@@ -13,6 +13,7 @@ import pandas as pd
 import glob
 import yaml
 import matplotlib.pyplot as plt
+import torchtt as tntt
 
 
 
@@ -444,82 +445,72 @@ class MPS_MLP(nn.Module):
         return x
     
 
-class NeuralNetwork:
-    def __init__(self, num_inputs, num_hiddenNodes1, num_hiddenNodes2, num_outputs):
+class NeuralNetwork(nn.Module):
+    def __init__(self, num_inputs, num_hiddenNodes1, num_hiddenNodes2, num_outputs, max_bond_dim=128, mpo_mode = True):
+        super(NeuralNetwork, self).__init__()
         self.num_inputs = num_inputs
         self.num_hiddenNodes1 = num_hiddenNodes1
         self.num_hiddenNodes2 = num_hiddenNodes2
         self.num_outputs = num_outputs
 
-        self.weights_ih1 = np.zeros((num_hiddenNodes1, num_inputs))
-        self.weights_h1h2 = np.zeros((num_hiddenNodes2, num_hiddenNodes1))
-        self.weights_h2o = np.zeros((num_outputs, num_hiddenNodes2))
-
-        self.bias_ih1 = np.zeros((num_hiddenNodes1, 1))
-        self.bias_h1h2 = np.zeros((num_hiddenNodes2, 1))
-        self.bias_h2o = np.zeros((num_outputs, 1))
-
-        self.mpo = MPOLinearTorchTT(factors=[10, 10, 10], max_bond=128)
-        self.use_mpo = False
+        # Define layers as PyTorch Linear layers
+        self.fc1 = nn.Linear(num_inputs, num_hiddenNodes1)
+        self.fc2 = nn.Linear(num_hiddenNodes1, num_hiddenNodes2)
+        self.fc3 = nn.Linear(num_hiddenNodes2, num_outputs)
+        
+        # Initialize weights
+        self._initialize_weights()
+        factor = 5
+        self.mpo = MPOLinearTorchTT(factors=[factor, factor, factor], max_bond=max_bond_dim)
+        self.use_mpo = mpo_mode
         self.mpo_ready = False
+
+    def _initialize_weights(self):
+        # Custom initialization similar to your original
+        nn.init.normal_(self.fc1.weight, 0.0, self.num_inputs ** -0.5)
+        nn.init.normal_(self.fc1.bias, 0.0, self.num_inputs ** -0.5)
+        
+        nn.init.normal_(self.fc2.weight, 0.0, self.num_hiddenNodes1 ** -0.5)
+        nn.init.normal_(self.fc2.bias, 0.0, self.num_hiddenNodes1 ** -0.5)
+        
+        nn.init.normal_(self.fc3.weight, 0.0, self.num_hiddenNodes2 ** -0.5)
+        nn.init.normal_(self.fc3.bias, 0.0, self.num_hiddenNodes2 ** -0.5)
 
     def setup(self):
-        # input -> hidden1
-        self.weights_ih1 = np.random.normal(
-            0.0, self.num_inputs ** -0.5,
-            (self.num_hiddenNodes1, self.num_inputs)
-        )
-        self.bias_ih1 = np.random.normal(
-            0.0, self.num_inputs ** -0.5,
-            (self.num_hiddenNodes1, 1)
-        )
-
-        # hidden1 -> hidden2
-        self.weights_h1h2 = np.random.normal(
-            0.0, self.num_hiddenNodes1 ** -0.5,
-            (self.num_hiddenNodes2, self.num_hiddenNodes1)
-        )
-        self.bias_h1h2 = np.random.normal(
-            0.0, self.num_hiddenNodes1 ** -0.5,
-            (self.num_hiddenNodes2, 1)
-        )
-
-        # hidden2 -> output
-        self.weights_h2o = np.random.normal(
-            0.0, self.num_hiddenNodes2 ** -0.5,
-            (self.num_outputs, self.num_hiddenNodes2)
-        )
-        self.bias_h2o = np.random.normal(
-            0.0, self.num_hiddenNodes2 ** -0.5,
-            (self.num_outputs, 1)
-        )
-
+        # Re-initialize weights
+        self._initialize_weights()
         self.mpo_ready = False
 
-    # ---------- forward ----------
-    def feedforward(self, inputs):
-        inputs = np.asarray(inputs).reshape(self.num_inputs, 1)
-
-        self.hidden1 = self.sigmoid(self.weights_ih1 @ inputs + self.bias_ih1)
-
+    def forward(self, x):
+        # Ensure input is float tensor
+        if isinstance(x, np.ndarray):
+            x = torch.from_numpy(x).float()
+        
+        # First layer
+        x = torch.sigmoid(self.fc1(x))
+        
+        # Second layer with MPO option
         if self.use_mpo:
             if not self.mpo_ready:
-                self.mpo.init_from_weights(self.weights_h1h2, self.bias_h1h2)
+                self.mpo.init_from_weights(
+                    self.fc2.weight.detach().numpy(),
+                    self.fc2.bias.detach().numpy()
+                )
                 self.mpo_ready = True
-            self.hidden2 = self.mpo.forward(self.hidden1)
+            # Convert to numpy for MPO, then back to tensor
+            x_np = x.detach().numpy()
+            x_mpo = self.mpo.forward(x_np)
+            x = torch.from_numpy(x_mpo).float()
         else:
-            self.hidden2 = self.weights_h1h2 @ self.hidden1 + self.bias_h1h2
+            x = torch.sigmoid(self.fc2(x))
+        
+        # Output layer
 
-        self.hidden2 = self.sigmoid(self.hidden2)
-        self.outputs = self.sigmoid(self.weights_h2o @ self.hidden2 + self.bias_h2o)
-        return self.outputs
+        if x.shape == (self.num_hiddenNodes2, 1):
+            x = x.t()
 
-    def sigmoid(self, x):
-        x = np.clip(x, -500, 500)
-        return 1 / (1 + np.exp(-x))
-
-    def dsigmoid(self, x):
-        return x * (1 - x)
+        x = torch.sigmoid(self.fc3(x))
+        return x
     
 
 
@@ -783,11 +774,16 @@ def create_parameter_dict(params, OPS_LIST, CONFIG):
 
 
 
-def train_model(model, n_epochs, single_qubit_probs, psi0, OPS_LIST, CONFIG, t_grid_fine, learning_rate, counts_shots):
+def train_model(model, n_epochs, single_qubit_probs, psi0, OPS_LIST, CONFIG, t_grid_fine, learning_rate, counts_shots, print_every=50):
 
     #initialization
     loss_history = []
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
+
+    #Reshape input for mpo NN
+    if CONFIG['NN_TYPE'] == 'mpo':
+        batch_size = single_qubit_probs.shape[0]
+        single_qubit_probs = single_qubit_probs.view(batch_size, -1)
 
     for epoch_i in range(n_epochs):
         optimizer.zero_grad()
@@ -810,7 +806,7 @@ def train_model(model, n_epochs, single_qubit_probs, psi0, OPS_LIST, CONFIG, t_g
 
         loss_history.append(loss.item())
 
-        if epoch_i % 50 == 0:
+        if epoch_i % print_every == 0:
             print(f"Epoch {epoch_i}, Loss: {loss.item()}")
 
          
@@ -872,20 +868,22 @@ if __name__ == "__main__":
     # Update NN output dimension
     NN_OUTPUT_DIM = NUM_COEFFICIENTS + sum(CONFIG[f'{axis}_fields'] for axis in ['x', 'y', 'z']) * L
 
-    network_type = CONFIG['NN_TYPE']
-
-    if network_type == "mpo":
-        NNmodel = NeuralNetwork(2*NN_INPUT_DIM, CONFIG['MPO_SIZE'], CONFIG['LINEAR_SIZE'], NN_OUTPUT_DIM, CONFIG['MAX_MPO_CHI']) #NN reshapes input from (L,2) to (num_inputs,1)
-
-    elif network_type == "mps":
-        NNmodel = MPS_MLP(NN_INPUT_DIM, CHI, NN_OUTPUT_DIM, num_dims = []) #num_dims is for optional intermediate layers
-        
     n_epochs = CONFIG['N_epochs']
 
     t_grid_fine = torch.arange(0.0, CONFIG["t_max"] + CONFIG["dt"]/2, CONFIG["dt"])
     learning_rate = CONFIG['learning_rate']
 
-    NNmodel, final_params, psi_final, loss_history = train_model(NNmodel, n_epochs, single_qubit_probs, psi0, OPS_LIST, CONFIG, t_grid_fine, learning_rate, counts_shots)
+    network_type = CONFIG['NN_TYPE']
+
+    if network_type == "mpo":
+        NNmodel = NeuralNetwork(2*NN_INPUT_DIM, CONFIG['MPO_SIZE'], CONFIG['LINEAR_SIZE'], NN_OUTPUT_DIM, CONFIG['MAX_MPO_CHI'], CONFIG['MPO_ON']) #NN reshapes input from (L,2) to (num_inputs,1)
+        NNmodel, final_params, psi_final, loss_history = train_model(NNmodel, n_epochs, single_qubit_probs, psi0, OPS_LIST, CONFIG, t_grid_fine, learning_rate, counts_shots, CONFIG['print_every'])
+
+    elif network_type == "mps":
+        NNmodel = MPS_MLP(NN_INPUT_DIM, CHI, NN_OUTPUT_DIM, num_dims = []) #num_dims is for optional intermediate layers
+        NNmodel, final_params, psi_final, loss_history = train_model(NNmodel, n_epochs, single_qubit_probs, psi0, OPS_LIST, CONFIG, t_grid_fine, learning_rate, counts_shots, CONFIG['print_every'])
+
+    
 
 
 
@@ -895,8 +893,8 @@ if __name__ == "__main__":
 
     normalized_counts = counts_shots / counts_shots.sum()
 
-    print(probs_np)
-    print(normalized_counts)
+    # print(probs_np)
+    # print(normalized_counts)
 
     diff = 0
     for i,j in zip(normalized_counts, probs_np):
