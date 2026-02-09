@@ -1,12 +1,12 @@
 # config.yaml
 
-L: 10
+L: 4
 bond_dimension: 2
 #Min and max values of tensor elements
 min_val: 0
 max_val: 1
 
-N_shots: 100000
+N_shots: 50000
 seed_data: 1234
 
 # DYNAMICS TYPE
