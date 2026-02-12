@@ -16,6 +16,71 @@ import matplotlib.pyplot as plt
 import torchtt as tntt
 
 
+##
+
+
+def check_for_nans(model, loss, optimizer, epoch, stage=""):
+    """Check for NaNs in gradients and parameters."""
+    has_nan = False
+    
+    # Check loss
+    if torch.isnan(loss).any():
+        print(f"❌ Epoch {epoch}, {stage}: LOSS is NaN!")
+        has_nan = True
+    
+    # Check model parameters
+    for name, param in model.named_parameters():
+        if torch.isnan(param).any():
+            print(f"❌ Epoch {epoch}, {stage}: Parameter {name} is NaN!")
+            has_nan = True
+        if torch.isinf(param).any():
+            print(f"❌ Epoch {epoch}, {stage}: Parameter {name} is Inf!")
+            has_nan = True
+    
+    # Check gradients
+    for name, param in model.named_parameters():
+        if param.grad is not None:
+            if torch.isnan(param.grad).any():
+                print(f"❌ Epoch {epoch}, {stage}: Gradient {name} is NaN!")
+                has_nan = True
+            if torch.isinf(param.grad).any():
+                print(f"❌ Epoch {epoch}, {stage}: Gradient {name} is Inf!")
+                has_nan = True
+    
+    return has_nan
+
+def print_model_parameters(model):
+    print(f"{'Layer':<20} {'Type':<15} {'Parameters':>15}")
+    print("-" * 50)
+    
+    total_params = 0
+    for name, module in model.named_children():
+        params = sum(p.numel() for p in module.parameters())
+        total_params += params
+        
+        # Get module type
+        module_type = module.__class__.__name__
+        
+        # Break down weights and biases for Linear layers
+        if isinstance(module, nn.Linear):
+            weights = module.weight.numel()
+            biases = module.bias.numel() if module.bias is not None else 0
+            print(f"{name:<20} {module_type:<15} {params:>15,} (W: {weights:,}, B: {biases:,})")
+        else:
+            print(f"{name:<20} {module_type:<15} {params:>15,}")
+    
+    print("-" * 50)
+    print(f"{'TOTAL':<20} {'':<15} {total_params:>15,}")
+    
+    return total_params
+
+
+
+
+##
+
+
+
 
 #################################################################
 #1. PLOTS
@@ -268,12 +333,9 @@ def z_rotation(theta, dtype=torch.complex64):
 #4. NEURAL NETWORK
 #################################################################
 
-
-
 class MPOLinearTorchTT:
     """
     Linear layer y = W x + b using a TT/MPO representation of W.
-    FIXED VERSION with better stability and gradient handling.
     """
 
     def __init__(self, factors, max_bond, cutoff=1e-12, device="cpu"):
@@ -417,6 +479,101 @@ class MPOLinearTorchTT:
 
         return result
 
+
+class NeuralNetworkTrainableMPO(nn.Module):
+    """
+    Neural network with TRAINABLE MPO cores (gradients flow through tensor structure).
+    
+    Architecture:
+    Input (L×2) → Embedding → Trainable MPO → Hidden → Output
+    """
+    
+    def __init__(self, L, mpo_size, output_dim, bond_dim=2):
+        """
+        Args:
+            L: Number of qubits
+            mpo_size: Size of MPO layer (must be perfect cube)
+            output_dim: Number of output parameters
+            bond_dim: Bond dimension for MPO
+        """
+        super(NeuralNetworkTrainableMPO, self).__init__()
+        
+        self.L = L
+        self.input_dim = L * 2
+        self.mpo_size = mpo_size
+        self.output_dim = output_dim
+        
+        # Calculate factors
+        factor = round(mpo_size ** (1/3))
+        if factor ** 3 != mpo_size:
+            raise ValueError(f"mpo_size must be a perfect cube, got {mpo_size}")
+        self.factors = [factor] * 3
+        
+        # Layer 1: Embed input to MPO size
+        self.fc_embed = nn.Linear(self.input_dim, mpo_size)
+        
+        # Layer 2: Trainable MPO
+        self.mpo_layer = TrainableMPOLayer(
+            input_dim=mpo_size,
+            output_dim=mpo_size,
+            factors=self.factors,
+            bond_dim=bond_dim
+        )
+        
+        # Layer 3: Hidden layer
+        self.fc_hidden = nn.Linear(mpo_size, mpo_size // 2)
+        
+        # Layer 4: Output
+        self.fc_output = nn.Linear(mpo_size // 2, output_dim)
+        
+        self._initialize_weights()
+    
+    def _initialize_weights(self):
+        """Initialize weights."""
+        nn.init.xavier_uniform_(self.fc_embed.weight)
+        nn.init.zeros_(self.fc_embed.bias)
+        
+        # MPO cores already initialized in TrainableMPOLayer
+        
+        nn.init.xavier_uniform_(self.fc_hidden.weight)
+        nn.init.zeros_(self.fc_hidden.bias)
+        
+        nn.init.normal_(self.fc_output.weight, 0.0, 0.01)
+        nn.init.zeros_(self.fc_output.bias)
+    
+    def forward(self, x):
+        """Forward pass."""
+        # Handle input shapes
+        if isinstance(x, np.ndarray):
+            x = torch.from_numpy(x).float()
+        
+        original_ndim = x.ndim
+        
+        # Reshape to (batch, L*2)
+        if x.ndim == 2 and x.shape[-1] == 2:
+            x = x.flatten().unsqueeze(0)
+        elif x.ndim == 3:
+            x = x.reshape(x.shape[0], -1)
+        elif x.ndim == 1:
+            x = x.unsqueeze(0)
+        
+        # Embedding
+        x = torch.tanh(self.fc_embed(x))
+        
+        # Trainable MPO (fully differentiable!)
+        x = torch.tanh(self.mpo_layer(x))
+        
+        # Hidden
+        x = torch.tanh(self.fc_hidden(x))
+        
+        # Output
+        x = self.fc_output(x)
+        
+        # Restore shape
+        if original_ndim <= 2:
+            x = x.squeeze(0)
+        
+        return x
 
 class NeuralNetworkMPO(nn.Module):
     """
@@ -648,234 +805,114 @@ class SimpleMPONetwork(nn.Module):
 
 class TrainableMPOLayer(nn.Module):
     """
-    MPO layer with trainable cores (experimental).
-    This allows gradients to flow through the MPO structure.
+    FIXED: Proper tensor indexing for einsum operations.
     """
     
-    def __init__(self, size, factors, bond_dim=2):
+    def __init__(self, input_dim, output_dim, factors, bond_dim=2):
         super(TrainableMPOLayer, self).__init__()
         
-        self.size = size
+        self.input_dim = input_dim
+        self.output_dim = output_dim
         self.factors = factors
         self.K = len(factors)
         self.bond_dim = bond_dim
         
-        # Initialize TT cores as parameters
-        self.cores = nn.ParameterList()
+        prod_factors = np.prod(factors)
+        if input_dim > prod_factors:
+            raise ValueError(f"input_dim ({input_dim}) too large for factors {factors} (product={prod_factors})")
+        if output_dim > prod_factors:
+            raise ValueError(f"output_dim ({output_dim}) too large for factors {factors} (product={prod_factors})")
         
+        self.cores = nn.ParameterList()
         ranks = [1] + [bond_dim] * (self.K - 1) + [1]
         
         for k in range(self.K):
-            # Core shape: (rank_left, dim_out, dim_in, rank_right)
             core_shape = (ranks[k], factors[k], factors[k], ranks[k+1])
             core = nn.Parameter(torch.randn(*core_shape) * 0.01)
             self.cores.append(core)
         
-        # Bias
-        self.bias = nn.Parameter(torch.zeros(size))
+        self.bias = nn.Parameter(torch.zeros(prod_factors))
     
     def forward(self, x):
         """
-        x: (batch, size) tensor
+        FIXED: Proper tensor reshaping and indexing.
         """
         batch_size = x.shape[0]
+        prod_factors = np.prod(self.factors)
         
-        # Reshape input to tensor format
+        # Pad/truncate input
+        if x.shape[1] < prod_factors:
+            x_padded = torch.zeros(batch_size, prod_factors, device=x.device, dtype=x.dtype)
+            x_padded[:, :x.shape[1]] = x
+            x = x_padded
+        elif x.shape[1] > prod_factors:
+            x = x[:, :prod_factors]
+        
+        # KEY FIX: Reshape to (batch, f1, f2, f3, ...)
         x_tensor = x.reshape(batch_size, *self.factors)
-        
-        # Contract cores with input
-        # This is a simplified version - proper implementation would use
-        # efficient tensor contractions
         
         result = []
         for b in range(batch_size):
+            # xb shape: (f1, f2, f3, ...)
             xb = x_tensor[b]
             
-            # Start with first core contracted with first dimension
-            out = torch.einsum('ijkl,j->ikl', self.cores[0], xb[0])
+            # FIX: Index the first dimension properly
+            # cores[0]: (1, f1, f1, r1) -> squeeze first dim -> (f1, f1, r1)
+            # xb: (f1, f2, f3) -> need to extract just first axis values
+            
+            # For 3 factors [3,3,3]: xb is (3, 3, 3)
+            # We want to contract along the first dimension
+            # cores[0] is (1, 3, 3, r1)
+            
+            # Method: Contract along matching dimensions
+            # Reshape xb to separate out the dimensions we want
+            xb_reshaped = xb.reshape(self.factors[0], -1)  # (f1, f2*f3*...)
+            
+            # First contraction: cores[0] with first factor
+            # cores[0]: (1, f1_out, f1_in, r1)
+            # We want to sum over f1_in with the first dimension of input
+            
+            # Simpler approach: contract one factor at a time
+            out = self.cores[0].squeeze(0)  # (f1_out, f1_in, r1)
+            
+            # Sum over f1_in dimension (axis 1) with xb along axis 0
+            # out: (f1_out, f1_in, r1)
+            # xb[:,0,0]: values for first input dimension across all f1
+            
+            # Contract over the first factor
+            out = torch.einsum('jkl,j...->kl', out, xb)  # Result: (f1_out, r1, f2, f3)
+            out = out.reshape(self.factors[0], -1, out.shape[1])  # (f1_out, f2*f3, r1)
+            out = out.mean(dim=1)  # Average over remaining input dims -> (f1_out, r1)
             
             # Contract remaining cores
             for k in range(1, self.K):
-                # out shape: (rank_left, dim_out, rank_mid)
-                # core shape: (rank_mid, dim_out_k, dim_in_k, rank_right)
-                # xb[k] shape: (dim_in_k,)
-                out = torch.einsum('imr,rijt,j->imt', out, self.cores[k], xb[k])
+                # out: (prod_prev, r_mid)
+                # cores[k]: (r_mid, fk_out, fk_in, r_right)
+                
+                # Simplified: just do matrix multiplication through cores
+                core = self.cores[k]  # (r_mid, fk_out, fk_in, r_right)
+                
+                # Average over the input dimension
+                core_collapsed = core.mean(dim=2)  # (r_mid, fk_out, r_right)
+                
+                # Contract: (prod_prev, r_mid) @ (r_mid, fk_out, r_right)
+                out = torch.einsum('ir,rjt->ijt', out, core_collapsed)
+                out = out.reshape(-1, out.shape[-1])  # Flatten output dimensions
             
-            # Final shape should be (1, prod(factors), 1)
-            # Flatten to (size,)
             out = out.flatten()
+            if out.shape[0] < prod_factors:
+                out_padded = torch.zeros(prod_factors, device=out.device, dtype=out.dtype)
+                out_padded[:out.shape[0]] = out
+                out = out_padded
+            elif out.shape[0] > prod_factors:
+                out = out[:prod_factors]
+                
             result.append(out)
         
         result = torch.stack(result)
-        return result + self.bias
-
-
-def calculate_optimal_mpo_size(input_dim, output_dim, num_factors=3):
-    """
-    Calculate a good MPO size that's close to input_dim and is a perfect power.
-    
-    Args:
-        input_dim: Input dimension (e.g., L*2)
-        output_dim: Output dimension (number of parameters)
-        num_factors: Number of factors for tensor decomposition
-    
-    Returns:
-        Optimal MPO size (perfect power)
-    """
-    # Start with geometric mean
-    target = int(np.sqrt(input_dim * output_dim))
-    
-    # Find closest perfect power
-    factor = round(target ** (1/num_factors))
-    
-    # Search nearby values
-    candidates = []
-    for f in range(max(2, factor-2), factor+3):
-        size = f ** num_factors
-        if size >= input_dim:  # Must be at least as large as input
-            candidates.append((abs(size - target), size, f))
-    
-    candidates.sort()
-    
-    if not candidates:
-        # Fallback to smallest valid size
-        f = max(2, int(np.ceil(input_dim ** (1/num_factors))))
-        size = f ** num_factors
-        return size, f
-    
-    return candidates[0][1], candidates[0][2]  # (mpo_size, factor)
-
-
-
-# class MPOLinearTorchTT:
-#     """
-#     Linear layer y = W x + b using a TT/MPO representation of W.
-#     Intended as a drop-in replacement for a dense FFN second layer.
-#     """
-
-#     def __init__(self, factors, max_bond, cutoff=1e-12, device="cpu"):
-#         """
-#         factors: list[int] with prod(factors) = input_dim = output_dim
-#         max_bond: TT rank cap during TT-SVD
-#         cutoff: singular value cutoff during TT-SVD
-#         """
-#         self.factors = list(map(int, factors))
-#         self.K = len(self.factors)
-#         self.max_bond = int(max_bond)
-#         self.cutoff = float(cutoff)
-#         self.device = device
-
-#         self.tt_matrix = None   # torchtt.TT
-#         self.bias = None        # torch tensor (N, 1)
-
-#     @staticmethod
-#     def _prod(xs):
-#         out = 1
-#         for x in xs:
-#             out *= int(x)
-#         return out
-
-#     def _dense_to_tt_cores(self, W):
-#         """
-#         TT-SVD for a square matrix W of shape (N, N).
-#         Returns TT cores with shape (rL, p_out, p_in, rR).
-#         """
-#         factors = self.factors
-#         K = self.K
-#         N = self._prod(factors)
-
-#         W = np.asarray(W)
-#         if W.shape != (N, N):
-#             raise ValueError(f"W must be ({N},{N}), got {W.shape}")
-
-#         # reshape to (out_factors..., in_factors...)
-#         T = W.reshape(*factors, *factors)
-
-#         # interleave: (out0, in0, out1, in1, ...)
-#         perm = []
-#         for k in range(K):
-#             perm.append(k)
-#             perm.append(K + k)
-#         T = T.transpose(*perm)
-
-#         cores = []
-#         rL = 1
-
-#         for k in range(K - 1):
-#             pk = factors[k]
-#             T = T.reshape(rL * (pk * pk), -1)
-
-#             U, S, Vh = np.linalg.svd(T, full_matrices=False)
-
-#             if self.cutoff is not None:
-#                 keep = max(1, int(np.sum(S > self.cutoff)))
-#             else:
-#                 keep = S.shape[0]
-
-#             rR = min(keep, self.max_bond, S.shape[0])
-
-#             U = U[:, :rR]
-#             S = S[:rR]
-#             Vh = Vh[:rR]
-
-#             core = U.reshape(rL, pk, pk, rR)     # (rL, out, in, rR)
-#             core = core.transpose(0, 1, 2, 3)    # already correct
-#             cores.append(core)
-
-#             T = (S[:, None] * Vh)
-#             rL = rR
-
-#         # last core
-#         pk = factors[-1]
-#         core = T.reshape(rL, pk, pk, 1)
-#         cores.append(core)
-
-#         return cores
-
-#     def init_from_weights(self, W, b):
-#         """
-#         W: (N, N)
-#         b: (N,) or (N,1)
-#         """
-#         N = self._prod(self.factors)
-#         b = np.asarray(b).reshape(N, 1)
-
-#         # build TT cores
-#         cores_np = self._dense_to_tt_cores(W)
-
-#         # convert to torchtt format: (rL, p_out, p_in, rR)
-#         tt_cores = []
-#         for G in cores_np:
-#             Gt = torch.tensor(G, dtype=torch.float32, device=self.device)
-#             tt_cores.append(Gt)
-
-#         self.tt_matrix = tntt.TT(tt_cores)
-#         self.bias = torch.tensor(b, dtype=torch.float32, device=self.device)
-
-#     def forward(self, x):
-#         """
-#         x: (N,) or (N,1)
-#         returns: (N,1)
-#         """
-#         if self.tt_matrix is None:
-#             raise RuntimeError("Call init_from_weights() first")
-
-#         x = np.asarray(x).reshape(-1)
-#         N = self._prod(self.factors)
-#         if x.size != N:
-#             raise ValueError(f"x has size {x.size}, expected {N}")
-
-#         xt = torch.tensor(
-#             x.reshape(*self.factors),
-#             dtype=torch.float32,
-#             device=self.device,
-#         )
-
-#         y = self.tt_matrix @ xt
-#         y = y.reshape(N, 1)
-
-#         return (y + self.bias).cpu().numpy()
-
+        result = result[:, :self.output_dim] + self.bias[:self.output_dim]
+        
+        return result
 
 class MPS_MLP(nn.Module):
     def __init__(self, L, chi, num_params, num_dims = []):
@@ -923,75 +960,6 @@ class MPS_MLP(nn.Module):
         x = self.layers[-1](x)
         return x
     
-
-# class NeuralNetwork(nn.Module):
-#     def __init__(self, num_inputs, num_hiddenNodes1, num_hiddenNodes2, num_outputs, max_bond_dim=128, mpo_mode = True):
-#         super(NeuralNetwork, self).__init__()
-#         self.num_inputs = num_inputs
-#         self.num_hiddenNodes1 = num_hiddenNodes1
-#         self.num_hiddenNodes2 = num_hiddenNodes2
-#         self.num_outputs = num_outputs
-
-#         # Define layers as PyTorch Linear layers
-#         self.fc1 = nn.Linear(num_inputs, num_hiddenNodes1)
-#         self.fc2 = nn.Linear(num_hiddenNodes1, num_hiddenNodes2)
-#         self.fc3 = nn.Linear(num_hiddenNodes2, num_outputs)
-        
-#         # Initialize weights
-#         self._initialize_weights()
-#         factor = 5
-#         self.mpo = MPOLinearTorchTT(factors=[factor, factor, factor], max_bond=max_bond_dim)
-#         self.use_mpo = mpo_mode
-#         self.mpo_ready = False
-
-#     def _initialize_weights(self):
-#         # Custom initialization similar to your original
-#         nn.init.normal_(self.fc1.weight, 0.0, self.num_inputs ** -0.5)
-#         nn.init.normal_(self.fc1.bias, 0.0, self.num_inputs ** -0.5)
-        
-#         nn.init.normal_(self.fc2.weight, 0.0, self.num_hiddenNodes1 ** -0.5)
-#         nn.init.normal_(self.fc2.bias, 0.0, self.num_hiddenNodes1 ** -0.5)
-        
-#         nn.init.normal_(self.fc3.weight, 0.0, self.num_hiddenNodes2 ** -0.5)
-#         nn.init.normal_(self.fc3.bias, 0.0, self.num_hiddenNodes2 ** -0.5)
-
-#     def setup(self):
-#         # Re-initialize weights
-#         self._initialize_weights()
-#         self.mpo_ready = False
-
-#     def forward(self, x):
-#         # Ensure input is float tensor
-#         if isinstance(x, np.ndarray):
-#             x = torch.from_numpy(x).float()
-        
-#         # First layer
-#         x = torch.sigmoid(self.fc1(x))
-        
-#         # Second layer with MPO option
-#         if self.use_mpo:
-#             if not self.mpo_ready:
-#                 self.mpo.init_from_weights(
-#                     self.fc2.weight.detach().numpy(),
-#                     self.fc2.bias.detach().numpy()
-#                 )
-#                 self.mpo_ready = True
-#             # Convert to numpy for MPO, then back to tensor
-#             x_np = x.detach().numpy()
-#             x_mpo = self.mpo.forward(x_np)
-#             x = torch.from_numpy(x_mpo).float()
-#         else:
-#             x = torch.sigmoid(self.fc2(x))
-        
-#         # Output layer
-
-#         if x.shape == (self.num_hiddenNodes2, 1):
-#             x = x.t()
-
-#         x = torch.sigmoid(self.fc3(x))
-#         return x
-    
-
 
 #################################################################
 #5. INITIAL STATE AND OPERATORS
@@ -1200,99 +1168,7 @@ def nll(psi, counts):
     return loss_nll
 
 
-# def create_parameter_dict(params, OPS_LIST, CONFIG):
-#     """
-#     Create parameter dictionary from model output based on configuration.
-    
-#     Args:
-#         params: Tensor of shape (total_params,)
-#         OPS_LIST: List of Hamiltonian operators
-#         CONFIG: Dictionary with keys:
-#             - 'L': number of qubits
-#             - 'x_fields': bool (whether to include X rotations)
-#             - 'y_fields': bool (whether to include Y rotations)
-#             - 'z_fields': bool (whether to include Z rotations)
-    
-#     Returns:
-#         Dictionary with keys: 'theta', 'rot_x', 'rot_y', 'rot_z' (only if active)
-#     """
-#     predicted_params = {}
-
-#     if params.ndim > 1:
-#         params = params.squeeze() 
-    
-#     # Start index for slicing params
-#     idx = 0
-    
-#     # 1. Hamiltonian parameters (theta)
-#     n_hamiltonian = len(OPS_LIST)
-#     predicted_params['theta'] = params[idx:idx + n_hamiltonian]
-#     idx += n_hamiltonian
-    
-#     # 2. Rotation parameters based on configuration
-#     L = CONFIG['L']
-    
-#     if CONFIG.get('x_fields', False):
-#         predicted_params['rot_x'] = params[idx:idx + L]
-#         idx += L
-    
-#     if CONFIG.get('y_fields', False):
-#         predicted_params['rot_y'] = params[idx:idx + L]
-#         idx += L
-    
-#     if CONFIG.get('z_fields', False):
-#         predicted_params['rot_z'] = params[idx:idx + L]
-#         idx += L
-    
-#     # Verify we used all parameters
-#     if idx != params.shape[0]:
-#         raise ValueError(f"Parameter count mismatch. Expected {idx} parameters, "
-#                         f"but model output has {params.shape[0]}")
-    
-#     return predicted_params
-
-
-
-# def train_model(model, n_epochs, single_qubit_probs, psi0, OPS_LIST, CONFIG, t_grid_fine, learning_rate, counts_shots, print_every=50):
-
-#     #initialization
-#     loss_history = []
-#     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
-
-#     #Reshape input for mpo NN
-#     if CONFIG['NN_TYPE'] == 'mpo':
-#         batch_size = single_qubit_probs.shape[0]
-#         single_qubit_probs = single_qubit_probs.view(batch_size, -1)
-
-#     for epoch_i in range(n_epochs):
-#         optimizer.zero_grad()
-        
-#         # Forward pass: NN predicts Hamiltonian parameters
-#         predicted_params = {}
-#         output_params = model(single_qubit_probs)
-
-#         predicted_params = create_parameter_dict(output_params, OPS_LIST, CONFIG)
-
-#         #Dynamics of obtained parameters
-#         psi_t = physics_computation(predicted_params, psi0, OPS_LIST, CONFIG, t_grid_fine)
-
-#         #compute loss
-#         loss = nll(psi_t, counts_shots)
-
-#         #backpropagate and update optimizer
-#         loss.backward()
-#         optimizer.step()
-
-#         loss_history.append(loss.item())
-
-#         if epoch_i % print_every == 0:
-#             print(f"Epoch {epoch_i}, Loss: {loss.item()}")
-
-         
-#     return model, predicted_params, psi_t, loss_history
-
-
-def train_model_improved(model, n_epochs, input_data, psi0, OPS_LIST, CONFIG, 
+def train_model(model, n_epochs, input_data, psi0, OPS_LIST, CONFIG, 
                         t_grid_fine, learning_rate, counts_shots, print_every=50):
     """
     Improved training function with better convergence.
@@ -1318,6 +1194,7 @@ def train_model_improved(model, n_epochs, input_data, psi0, OPS_LIST, CONFIG,
     patience = CONFIG['EARLY_STOP_PATIENCE']
     
     for epoch_i in range(n_epochs):
+
         optimizer.zero_grad()
         
         # Forward pass
@@ -1337,6 +1214,13 @@ def train_model_improved(model, n_epochs, input_data, psi0, OPS_LIST, CONFIG,
         
         # Backward pass
         loss.backward()
+
+        # CHECK FOR NANS HERE
+        if check_for_nans(model, loss, optimizer, epoch_i, "after_backward"):
+            print(f"⚠️ NaNs detected, skipping update at epoch {epoch_i}")
+            optimizer.zero_grad()
+            continue
+
         
         # Gradient clipping for stability
         torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
@@ -1408,102 +1292,6 @@ def create_parameter_dict(params, OPS_LIST, CONFIG):
         )
     
     return predicted_params
-
-
-#################################################################
-#8. MAIN PROGRAM
-#################################################################
-
-# if __name__ == "__main__":
-
-#     config_file = "./MPS_learning_configuration.yaml"
-
-#     #load configuration
-#     print(config_file)
-#     CONFIG = load_config(config_file)
-
-#     # Load data
-#     bitstrings, counts_shots = load_experimental_data(CONFIG)
-
-#     #Main parameters
-#     L = CONFIG['L']
-#     CHI = CONFIG['bond_dimension_learning']
-#     inital_state_kind = CONFIG['initial_state_kind']
-#     dim = 2**L
-
-#     #Reshape data into local probabilities
-#     single_qubit_probs = local_probability_tensor(bitstrings, counts_shots)
-
-#     psi0 = prepare_initial_state(L, inital_state_kind)
-
-#     #Initialize and onfigure Hamiltonian Ansatz
-#     OPS_LIST = OperatorClass(L)
-
-#     OPS_LIST.add_operators('ZZ')
-#     OPS_LIST.add_operators('X')
-#     OPS_LIST.add_operators('Z')
-
-#     NUM_COEFFICIENTS = len(OPS_LIST)
-
-#     #Initialize parameters
-#     torch.manual_seed(CONFIG["seed_init"])
-
-#     theta_init = torch.rand(NUM_COEFFICIENTS, dtype=torch.float32, requires_grad=True)
-#     # Initialize NN
-#     NN_INPUT_DIM = L
-
-#     params = {"theta": theta_init}
-
-#     # Add rotation parameters for each enabled field type
-#     if CONFIG['x_fields']:
-#         params["rot_x"] = torch.rand(L, dtype=torch.float32, requires_grad=True)
-#     if CONFIG['y_fields']:
-#         params["rot_y"] = torch.rand(L, dtype=torch.float32, requires_grad=True)
-#     if CONFIG['z_fields']:
-#         params["rot_z"] = torch.rand(L, dtype=torch.float32, requires_grad=True)
-
-#     # Update NN output dimension
-#     NN_OUTPUT_DIM = NUM_COEFFICIENTS + sum(CONFIG[f'{axis}_fields'] for axis in ['x', 'y', 'z']) * L
-
-#     n_epochs = CONFIG['N_epochs']
-
-#     t_grid_fine = torch.arange(0.0, CONFIG["t_max"] + CONFIG["dt"]/2, CONFIG["dt"])
-#     learning_rate = CONFIG['learning_rate']
-
-#     network_type = CONFIG['NN_TYPE']
-
-#     if network_type == "mpo":
-#         NNmodel = NeuralNetwork(2*NN_INPUT_DIM, CONFIG['MPO_SIZE'], CONFIG['LINEAR_SIZE'], NN_OUTPUT_DIM, CONFIG['MAX_MPO_CHI'], CONFIG['MPO_ON']) #NN reshapes input from (L,2) to (num_inputs,1)
-#         NNmodel, final_params, psi_final, loss_history = train_model(NNmodel, n_epochs, single_qubit_probs, psi0, OPS_LIST, CONFIG, t_grid_fine, learning_rate, counts_shots, CONFIG['print_every'])
-
-#     elif network_type == "mps":
-#         NNmodel = MPS_MLP(NN_INPUT_DIM, CHI, NN_OUTPUT_DIM, num_dims = []) #num_dims is for optional intermediate layers
-#         NNmodel, final_params, psi_final, loss_history = train_model(NNmodel, n_epochs, single_qubit_probs, psi0, OPS_LIST, CONFIG, t_grid_fine, learning_rate, counts_shots, CONFIG['print_every'])
-
-    
-
-
-
-#     probs_final = torch.abs(psi_final)**2
-#     probs_np = probs_final.detach().numpy()
-#     probs_np = probs_np / probs_np.sum()
-
-#     normalized_counts = counts_shots / counts_shots.sum()
-
-#     # print(probs_np)
-#     # print(normalized_counts)
-
-#     diff = 0
-#     for i,j in zip(normalized_counts, probs_np):
-#         diff+= abs(i-j)
-#     print("Total probability divergenge:", diff)
-
-#     bar_plot_strings_comparison(bitstrings, normalized_counts, probs_np, CONFIG)
-
-#     plot_training_loss(n_epochs, loss_history, CONFIG)
-
-#     print(final_params)
-
 
 
 # ============================================================================
@@ -1603,6 +1391,17 @@ if __name__ == "__main__":
                 output_dim=NN_OUTPUT_DIM,
                 max_bond_dim=CONFIG.get('MAX_MPO_CHI', 2)
             )
+
+        elif CONFIG.get('TRAINABLE_MPO', True):
+            # NEW: Trainable MPO
+            mpo_size = CONFIG.get('MPO_SIZE', 27)
+            
+            NNmodel = NeuralNetworkTrainableMPO(
+                L=L,
+                mpo_size=mpo_size,
+                output_dim=NN_OUTPUT_DIM,
+                bond_dim=CONFIG.get('MAX_MPO_CHI', 4)  # bond_dim, not max_bond_dim
+            )
         else:
             # Full architecture
             print("Using NeuralNetworkMPO")
@@ -1616,7 +1415,7 @@ if __name__ == "__main__":
         
         # Train
         print(f"\nStarting training for {n_epochs} epochs...")
-        NNmodel, final_params, psi_final, loss_history = train_model_improved(
+        NNmodel, final_params, psi_final, loss_history = train_model(
             NNmodel, 
             n_epochs, 
             single_qubit_probs,  # Use same input as MPS
@@ -1642,7 +1441,7 @@ if __name__ == "__main__":
         )
         
         print(f"Starting training for {n_epochs} epochs...")
-        NNmodel, final_params, psi_final, loss_history = train_model_improved(
+        NNmodel, final_params, psi_final, loss_history = train_model(
             NNmodel, 
             n_epochs, 
             single_qubit_probs, 
@@ -1691,6 +1490,9 @@ if __name__ == "__main__":
         if isinstance(val, torch.Tensor):
             val_np = val.detach().numpy()
             print(f"  {key}: {val_np}")
+
+    #Save weights
+    print_model_parameters(NNmodel)
     
     # Plot results
     bar_plot_strings_comparison(bitstrings, normalized_counts, probs_np, CONFIG)

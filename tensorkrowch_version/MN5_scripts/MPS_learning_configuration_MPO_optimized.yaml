@@ -1,0 +1,155 @@
+# UPDATED CONFIGURATION FOR MPO TRAINING
+# This configuration includes fixes and optimal settings for MPO convergence
+
+# SYSTEM PARAMETERS
+L: 8
+bond_dimension_data: 2
+bond_dimension_learning: 2
+t_max: 1.0
+initial_state_kind: "all_zeros" # "all_zeros" or "all_plus"
+
+# HAMILTONIAN MODEL
+hamiltonian_type: "custom"
+x_fields: False
+y_fields: False
+z_fields: False
+
+# NOISE SETTINGS
+use_noisy_dynamics: False
+learn_noise_params: False
+noise_model: "global"
+gamma_dephasing_init: 0
+gamma_damping_init: 0
+
+model: 'manual'
+
+# TRAINING PARAMETERS - IMPROVED FOR MPO
+dt: 0.01
+N_epochs: 300  # Increased for better convergence
+learning_rate: 0.01  # Lower learning rate for stability
+print_every: 50
+
+# HAMILTONIAN INITIAL GUESS
+Jx_init: 0.5 
+Jy_init: 0.5 
+Jz_init: 0.5
+hx_init: 0.0 
+hy_init: 0.0 
+hz_init: 0.5
+hx_list_init: [0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5]  # Length L
+hz_list_init: [0, 0, 0, 0, 0, 0, 0, 0]  # Length L
+Jzz_list_init: [0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5]  # Length L-1
+INIT_PERTURB_SCALE: 0.0
+
+# NDE ARCHITECTURE
+MODEL_TYPE: "white"
+NN_MODEL_TYPE: "time_dependent"
+NN_hidden_sizes: [64]
+learn_theta: False
+
+# ============================================================================
+# MPO ARCHITECTURE - CRITICAL SETTINGS
+# ============================================================================
+
+NN_TYPE: "mpo"  # "mps" or "mpo"
+
+# IMPORTANT: MPO_SIZE must be a perfect cube (n³) for 3-factor decomposition
+# Valid values: 8, 27, 64, 125, 216, 343, 512, 729, 1000
+# For L=8 (input_dim = 16), recommended sizes: 27 or 64
+
+# Option 1: Auto-calculate optimal MPO size (recommended)
+AUTO_MPO_SIZE: True
+
+# Option 2: Manual MPO size (only used if AUTO_MPO_SIZE = False)
+MPO_SIZE: 216  # 3³ = 27 (good for L=8)
+
+# MPO bond dimension (rank
+# Lower = more compression but less expressivity
+# Higher = less compression but more expressivity
+MAX_MPO_CHI: 2  # Increased from 2 for better performance
+
+# Use simple MPO architecture for debugging
+SIMPLE_MPO: False  # Set to True if having convergence issues
+
+# MPO mode toggle
+MPO_ON: False  # Actually use MPO decomposition
+
+# ============================================================================
+# REGULARIZATION AND STABILITY
+# ============================================================================
+
+lambda_reg: 0.01  # L2 regularization on parameters
+noise_reg: 0.001
+
+# Gradient clipping (handled in training function)
+GRAD_CLIP_NORM: 1.0
+
+# Learning rate schedule
+USE_LR_SCHEDULER: False
+LR_PATIENCE: 2000
+LR_FACTOR: 0.5
+
+# Early stopping
+USE_EARLY_STOPPING: False
+EARLY_STOP_PATIENCE: 5000
+
+# ============================================================================
+# ALTERNATIVE MPO SIZES FOR DIFFERENT L
+# ============================================================================
+
+# For reference, here are good MPO sizes for different system sizes:
+# L=4  (input=8):   MPO_SIZE=27  (factor=3)
+# L=6  (input=12):  MPO_SIZE=27  (factor=3)
+# L=8  (input=16):  MPO_SIZE=27  (factor=3) or 64 (factor=4)
+# L=10 (input=20):  MPO_SIZE=27  (factor=3) or 64 (factor=4)
+# L=12 (input=24):  MPO_SIZE=27  (factor=3) or 64 (factor=4)
+# L=16 (input=32):  MPO_SIZE=64  (factor=4) or 125 (factor=5)
+
+# ============================================================================
+# CURRICULUM LEARNING
+# ============================================================================
+
+PHASE1_SPLIT: 0.4
+PHASE2_SPLIT: 0.4
+PHASE3_SPLIT: 0.2
+seed_init: 4321
+T_extrapolate_factor: 5.0
+
+# ============================================================================
+# COMPARISON SETTINGS
+# ============================================================================
+
+# For comparing MPO vs MPS performance
+RUN_COMPARISON: False  # Set to True to run both and compare
+
+ 
+# ============================================================================
+# NOTES ON MPO CONVERGENCE
+# ============================================================================
+
+# If MPO is not converging well, try:
+# 
+# 1. Increase MAX_MPO_CHI (e.g., 4, 8, 16)
+#    - Higher bond dimension = more expressivity
+# 
+# 2. Use SIMPLE_MPO: True
+#    - Simpler architecture may converge better
+# 
+# 3. Decrease learning_rate (e.g., 0.0005)
+#    - More stable training
+# 
+# 4. Increase lambda_reg (e.g., 0.05)
+#    - Prevent parameter explosion
+# 
+# 5. Use smaller MPO_SIZE
+#    - Less compression, easier optimization
+#    - Try: 27 instead of 125
+# 
+# 6. Set AUTO_MPO_SIZE: True
+#    - Let the code find optimal size
+# 
+# 7. Compare with MPO_ON: False
+#    - Check if issue is MPO-specific or general architecture
+# 
+# 8. Start with MPS to verify data/physics code
+#    - Then switch to MPO

@@ -1,0 +1,25 @@
+# config.yaml
+
+L: 4
+bond_dimension: 2
+#Min and max values of tensor elements
+min_val: 0
+max_val: 1
+
+N_shots: 100000
+seed_data: 1234
+
+# DYNAMICS TYPE
+dynamics_type: "lindblad"  # "schrodinger" or "lindblad"
+
+# NOISE MODEL
+noise_model: "global" # "global" (same for all qubits) or "local" (per-qubit)
+
+# NOISE PARAMETERS
+# For "global" noise model:
+T1_global: 1000.0
+T2_global: 500.0
+
+# For "local" noise model (per-qubit T1 and T2):
+T1_list: [10.0, 10.0, 10.0]   # T1 for each qubit of length L
+T2_list: [5.0, 5.0, 5.0]     # T2 for each qubit of length L
