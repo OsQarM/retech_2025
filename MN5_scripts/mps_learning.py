@@ -201,12 +201,13 @@ def bar_plot_strings_comparison(strings, values1, values2, config, labels=None,
     N = config['L']
     chi_data = config['bond_dimension_data']
     chi_nn = config['bond_dimension_learning']
-    filename_core = f"L{N}_Chidata_{chi_data}_ChiNN{chi_nn}"
+    kind = config['data_kind']
+    filename_core = f"L{N}_kind-{kind}_Chidata{chi_data}_ChiNN{chi_nn}"
     filename = f'./learned_bitstrings_{filename_core}'
     
     # Adjust layout
     plt.tight_layout()
-    plt.savefig(f'{filename}.png', bbox_inches='tight', dpi=300)
+    plt.savefig(f'plots/{filename}.png', bbox_inches='tight', dpi=300)
     
     return fig, ax, (bars1, bars2) if style != 'stacked' else (bars1, bars2)
 
@@ -222,12 +223,13 @@ def plot_training_loss(losses, config):
     N = config['L']
     chi_data = config['bond_dimension_data']
     chi_nn = config['bond_dimension_learning']
-    filename_core = f"L{N}_Chidata_{chi_data}_ChiNN{chi_nn}"
+    kind = config['data_kind']
+    filename_core = f"L{N}_kind-{kind}_Chidata{chi_data}_ChiNN{chi_nn}"
     filename = f'./training_loss_{filename_core}'
 
     # Adjust layout
     plt.tight_layout()
-    plt.savefig(f'{filename}.png', bbox_inches='tight', dpi=300)
+    plt.savefig(f'plots/{filename}.png', bbox_inches='tight', dpi=300)
         
 
 
@@ -249,20 +251,25 @@ def load_experimental_data(config):
     N = config["L"]
     chi = config['bond_dimension_data']
     T_max = config["t_max"]
-    search_pattern = f"./experimental_data_quantum_sampling_L{N}_Chi_{chi}_*_counts.csv"
+    kind = config['data_kind'] 
+    if kind == 'mps':
+        search_pattern = f"./data/experimental_data_quantum_sampling_L{N}_Chi_{chi}_*_counts.csv"
+    else:
+        search_pattern = f"./data/experimental_data_quantum_sampling_L{N}_{kind}_*_counts.csv"
+
     files = glob.glob(search_pattern)
 
     if not files:
         raise FileNotFoundError(f"No data found for L={N}")
 
     config_file = files[0]
-    file_core = config_file.replace(".csv", "").replace("./experimental_data_quantum_sampling_", "")
+    file_core = config_file.replace(".csv", "").replace("./data/experimental_data_quantum_sampling_", "")
     
     print(f"\n{'='*60}")
     print(f"LOADING DATA: {file_core}")
     print(f"{'='*60}")
     
-    df_counts = pd.read_csv(f"./experimental_data_quantum_sampling_{file_core}.csv")
+    df_counts = pd.read_csv(f"./data/experimental_data_quantum_sampling_{file_core}.csv")
         
     # Remove leading single quote if present
     if df_counts['bitstring'].astype(str).str.startswith("'").all():

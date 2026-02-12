@@ -6,8 +6,12 @@ bond_dimension: 2
 min_val: 0
 max_val: 1
 
-N_shots: 100000
+N_shots: 50000
 seed_data: 1234
+
+#State type (only for generate_state_data_script)
+state_type: 'zeros' #options: zeros, plus, ghz
+
 
 # DYNAMICS TYPE
 dynamics_type: "lindblad"  # "schrodinger" or "lindblad"

@@ -1,6 +1,5 @@
 import numpy as np
 import jax
-import jax.numpy as jnp
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -27,39 +26,33 @@ def print_run_info(config):
     return
 
 
-
 #########################################
-#2. DATA GENERATION
+#2 STATE GENERATION
 #########################################
 
+
+def create_state(L, kind, dtype=np.complex64):
+    """Prepare initial quantum states for L qubits."""
+
+    if kind == 'zeros':
+        psi = np.zeros(2**L, dtype=dtype)
+        psi[0]  = 1.0
+
+    elif kind == 'plus':
+        plus = np.ones(2, dtype=dtype) / np.sqrt(2)
+        psi = plus
+        for _ in range(L - 1):
+            psi = np.kron(psi, plus)
     
-def create_spin_chain_mps(N: int, chi: int, seed: int, min_val: float, max_val: float, dtype=jnp.float32):
-    '''Creates list of tensors that define the MPS of a quantum spin 1/2 chain
-    The first and last tensors will have two indices, the rest have 3
-    The first index has dimension 2, and the rest have bond dimension equal to chi
-    '''
-    
-    # Create random keys
-    key = jax.random.PRNGKey(seed)
-    keys = jax.random.split(key, N)
-    
-    # Scale factor for uniform distribution
-    scale_factor = max_val - min_val
-    
-    # Initialize tensor list
-    mps = []
-    
-    # First tensor
-    mps.append(min_val + scale_factor * jax.random.uniform(keys[0], (2, chi), dtype=dtype))
-    
-    # Middle tensors
-    for i in range(1, N-1):
-        mps.append(min_val + scale_factor * jax.random.uniform(keys[i], (2, chi, chi), dtype=dtype))
-    
-    # Last tensor
-    mps.append(min_val + scale_factor * jax.random.uniform(keys[N-1], (2, chi), dtype=dtype))
-    
-    return mps
+    elif kind == 'ghz':
+        psi = np.zeros(2**L, dtype=dtype)
+        psi[0]  = 1.0 / np.sqrt(2)
+        psi[-1] = 1.0 / np.sqrt(2)
+            
+    else:
+        raise ValueError(f"Initial state '{kind}' not recognized. "
+                        f"Use 'all_zeros' or 'all_plus'")
+    return psi
 
 def generate_bitstring_list(nqubits):
     '''Create list containing all possible bitstrings of the N-qubit chain'''
@@ -70,27 +63,27 @@ def generate_bitstring_list(nqubits):
 
     return bitstrings
 
-def get_amplitude(mps, string, N):
+def get_amplitude(psi, string, N, dtype = np.complex64):
     '''For each bitstring, calculate the amplitude of the MPS'''
-    current = mps[0][int(string[0])]
-    # Contract with middle tensors
-    for i in range(1, N-1):
-        tensor_slice = mps[i][int(string[i])]
-        current = jnp.dot(current, tensor_slice)
-    # Contract with last tensor
-    last_slice = mps[-1][int(string[-1])]
+    psi_string = np.zeros(2, dtype=dtype)
+    psi_string[0 if string[0] == '0' else 1] = 1.0
+
+    for bit in string[1:]:
+        psi_bit = np.zeros(2, dtype=dtype)
+        psi_bit[0 if bit == '0' else 1] = 1.0
+        psi_string = np.kron(psi_string, psi_bit)
     
     # Final contraction gives scalar
-    amplitude = float(jnp.dot(current, last_slice))
+    amplitude = float(np.vdot(psi_string, psi))
     
     return amplitude
 
-def extract_amplitudes(mps):
-    num_qubits = len(mps)
+def extract_amplitudes(psi, N):
+    num_qubits = N
     bitstrings = generate_bitstring_list(num_qubits)
     probs = []
     for string in bitstrings:
-        amp = get_amplitude(mps, string, num_qubits)
+        amp = get_amplitude(psi, string, num_qubits)
         probs.append(amp**2)
 
     total_prob = sum(probs)
@@ -110,15 +103,14 @@ def sample_from_probs(nqubits, N_shots, probs, seed):
     return counts_shots
 
 
-
 #########################################
 #3. SAVING AND PLOTTING
 #########################################
 
 
-def save_sample_bitstrings(bitstrings, counts, prefix = None):
+def save_sample_bitstrings(bitstrings, counts, kind, prefix = None):
     #Create config file and save here L, chi, Nshots
-    filename_core = f"L{N}_Chi_{chi}_R{N_shots}"
+    filename_core = f"L{N}_{kind}_R{N_shots}"
 
     filename = f'./data/experimental_data_{prefix}_{filename_core}_counts.csv'
 
@@ -162,7 +154,7 @@ def bar_plot_strings(strings, values, title="Bar Plot", xlabel="Bitstrings", yla
     # Add grid for better readability
     ax.grid(axis='y', alpha=0.3, linestyle='--')
 
-    filename_core = f"L{N}_Chi_{chi}_R{N_shots}"
+    filename_core = f"L{N}_Chi_{kind}_R{N_shots}"
 
     filename = f'./bitstring_histogram_{filename_core}'
     
@@ -194,20 +186,15 @@ if __name__ == "__main__":
     # Test
     seed = CONFIG['seed_data']
     N = CONFIG['L']
-    chi = CONFIG['bond_dimension']
-    min_val = CONFIG['min_val']
-    max_val = CONFIG['max_val']
     N_shots = CONFIG['N_shots']
+    kind = CONFIG['state_type']
     print_run_info(CONFIG)
 
-    mps = create_spin_chain_mps(N, chi, seed, min_val, max_val)
+    psi = create_state(N, kind)
 
-    # Check the shapes
-    print(f"Number of tensors: {len(mps)}")
-    for i, tensor in enumerate(mps):
-        print(f"Tensor {i}: shape = {tensor.shape}")
+    print(len(psi))
 
-    bitstrings, probs = extract_amplitudes(mps)
+    bitstrings, probs = extract_amplitudes(psi, N)
 
     counts_shots = sample_from_probs(N, N_shots, probs, seed)
 
@@ -216,6 +203,7 @@ if __name__ == "__main__":
     files = save_sample_bitstrings(
         bitstrings=bitstrings,
         counts=counts_shots,
+        kind = kind,
         prefix="quantum_sampling"
         )
     
