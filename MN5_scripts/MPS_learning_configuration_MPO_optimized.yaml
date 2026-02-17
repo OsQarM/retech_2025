@@ -7,7 +7,7 @@ bond_dimension_data: 4
 bond_dimension_learning: 2
 t_max: 1.0
 initial_state_kind: "all_plus" # "all_zeros" or "all_plus"
-data_kind: 'zeros' # options, mps, zeros, plus, ghz
+data_kind: 'mps' # options, mps, zeros, plus, ghz
 
 # HAMILTONIAN MODEL
 hamiltonian_type: "custom"

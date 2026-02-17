@@ -202,8 +202,9 @@ def bar_plot_strings_comparison(strings, values1, values2, config, labels=None,
     chi_data = config['bond_dimension_data']
     chi_nn = config['bond_dimension_learning']
     kind = config['data_kind']
-    filename_core = f"L{N}_kind-{kind}_Chidata{chi_data}_ChiNN{chi_nn}"
-    filename = f'./learned_bitstrings_{filename_core}'
+    nn_type = config['NN_TYPE']
+    filename_core = f"L{N}_nn-{nn_type}_kind-{kind}_Chidata{chi_data}_ChiNN{chi_nn}"
+    filename = f'./training_loss_{filename_core}'
     
     # Adjust layout
     plt.tight_layout()
@@ -224,7 +225,8 @@ def plot_training_loss(losses, config):
     chi_data = config['bond_dimension_data']
     chi_nn = config['bond_dimension_learning']
     kind = config['data_kind']
-    filename_core = f"L{N}_kind-{kind}_Chidata{chi_data}_ChiNN{chi_nn}"
+    nn_type = config['NN_TYPE']
+    filename_core = f"L{N}_nn-{nn_type}_kind-{kind}_Chidata{chi_data}_ChiNN{chi_nn}"
     filename = f'./training_loss_{filename_core}'
 
     # Adjust layout
