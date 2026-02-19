@@ -59,6 +59,12 @@ def plot_hamiltonian_parameters(theta_true, theta_init, theta_final, hamiltonian
     noise_type = config['noise_model']
 
     filename_core = f"L{N}_h_type-{h_type}_noise-{noise}_type{noise_type}"
+    
+    # Save parameters to .npy files
+    np.save(f'../results/hamiltonian_true_{filename_core}.npy', theta_true)
+    np.save(f'../results/hamiltonian_init_{filename_core}.npy', theta_init)
+    np.save(f'../results/hamiltonian_learned_{filename_core}.npy', theta_final)
+
     filename = f'./hamiltonian_parameters_{filename_core}'
     
     # Adjust layout
@@ -141,6 +147,11 @@ def plot_noise_parameters(learned_rates, true_rates, noise_model, L, config):
 
 
     filename_core = f"L{N}_h_type-{h_type}_noise-{noise}_type{noise_type}"
+
+    # Save noise parameters
+    np.save(f'../results/noise_true_{filename_core}.npy', true_rates)
+    np.save(f'../results/noise_learned_{filename_core}.npy', learned_rates)
+
     filename = f'./noise_parameters_{filename_core}'
     
     # Adjust layout
@@ -180,8 +191,17 @@ def plot_mixed_state_fidelity(traj_model, traj_vanilla, traj_true, config, t_gri
            noise_type = config['noise_model']
 
            filename_core = f"L{N}_h_type-{h_type}_noise-{noise}_type{noise_type}"
+
+           # Save trajectories and fidelities
+           np.save(f'../results/traj_model_{filename_core}.npy', traj_model_np)
+           np.save(f'../results/traj_vanilla_{filename_core}.npy', traj_van_np)
+           if traj_true is not None:
+               np.save(f'../results/traj_true_{filename_core}.npy', traj_true_np)
+               np.save(f'../results/fidelity_model_{filename_core}.npy', fid_model)
+               np.save(f'../results/fidelity_vanilla_{filename_core}.npy', fid_van)
+
+
            filename = f'./mixed_state_fidelity_{filename_core}'
-            
            # Adjust layout
            plt.tight_layout()
            plt.savefig(f'../plots//{filename}.png', bbox_inches='tight', dpi=300)
@@ -208,8 +228,13 @@ def plot_purity(traj_model_np, traj_van_np, t_grid_long, config):
 
 
        filename_core = f"L{N}_h_type-{h_type}_noise-{noise}_type{noise_type}"
-       filename = f'./purity_{filename_core}'
 
+       # Save purity data
+       np.save(f'../results/purity_model_{filename_core}.npy', purity_model)
+       np.save(f'../results/purity_vanilla_{filename_core}.npy', purity_van)
+       np.save(f'../results/time_grid_{filename_core}.npy', t_grid_long)
+       
+       filename = f'./purity_{filename_core}'
        # Adjust layout
        plt.tight_layout()
        plt.savefig(f'../plots//{filename}.png', bbox_inches='tight', dpi=300)
@@ -237,8 +262,16 @@ def plot_pure_state_fidelity(traj_model, traj_vanilla, traj_true, config, t_grid
            noise_type = config['noise_model']
 
            filename_core = f"L{N}_h_type-{h_type}_noise-{noise}_type{noise_type}"
-           filename = f'./pure_fidelity_{filename_core}'
 
+           # Save trajectories and fidelities
+           np.save(f'../results/psi_model_{filename_core}.npy', psi_model_np)
+           np.save(f'../results/psi_vanilla_{filename_core}.npy', psi_van_np)
+           if traj_true is not None:
+               np.save(f'../results/psi_true_{filename_core}.npy', psi_true_np)
+               np.save(f'../results/fidelity_pure_model_{filename_core}.npy', fid_nde)
+               np.save(f'../results/fidelity_pure_vanilla_{filename_core}.npy', fid_van)
+
+           filename = f'./pure_fidelity_{filename_core}'
            # Adjust layout
            plt.tight_layout()
            plt.savefig(f'../plots//{filename}.png', bbox_inches='tight', dpi=300)
@@ -302,11 +335,16 @@ def plot_observables(t_grid, obs_true, obs_model, obs_vanilla, L, hamiltonian_ty
     h_type = config['hamiltonian_type']
     noise =  config['use_noisy_dynamics']
     noise_type = config['noise_model']
-
-
     filename_core = f"L{N}_h_type-{h_type}_noise-{noise}_type{noise_type}"
+
+    # Save observables
+    if obs_true is not None:
+        np.save(f'../results/obs_true_{filename_core}.npy', obs_true)
+    np.save(f'../results/obs_model_{filename_core}.npy', obs_model)
+    np.save(f'../results/obs_vanilla_{filename_core}.npy', obs_vanilla)
+    np.save(f'../results/time_grid_obs_{filename_core}.npy', t_grid)
+
     filename = f'./observables_{filename_core}'
-    
     # Adjust layout
     plt.tight_layout()
     plt.savefig(f'../plots//{filename}.png', bbox_inches='tight', dpi=300)
@@ -329,8 +367,12 @@ def plot_training_loss(losses, config):
        noise_type = config['noise_model']
 
        filename_core = f"L{N}_h_type-{h_type}_noise-{noise}_type{noise_type}"
-       filename = f'./loss_{filename_core}'
 
+
+       # Save loss history
+       np.save(f'../results/loss_history_{filename_core}.npy', np.array(losses))
+
+       filename = f'./loss_{filename_core}'
        # Adjust layout
        plt.tight_layout()
        plt.savefig(f'../plots//{filename}.png', bbox_inches='tight', dpi=300)
