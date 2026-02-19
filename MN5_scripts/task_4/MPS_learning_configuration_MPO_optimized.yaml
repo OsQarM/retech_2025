@@ -15,38 +15,11 @@ x_fields: False #add local fields as rotations (not working yet)
 y_fields: False
 z_fields: False
 
-# NOISE SETTINGS (not used yet)
-use_noisy_dynamics: False
-learn_noise_params: False
-noise_model: "global"
-gamma_dephasing_init: 0
-gamma_damping_init: 0
-
-model: 'manual'
-
 # TRAINING PARAMETERS - IMPROVED FOR MPO
 dt: 0.01
 N_epochs: 500 
 learning_rate: 0.01 
 print_every: 50
-
-# HAMILTONIAN INITIAL GUESS (not used)
-Jx_init: 0.5 
-Jy_init: 0.5 
-Jz_init: 0.5
-hx_init: 0.0 
-hy_init: 0.0 
-hz_init: 0.5
-hx_list_init: [0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5]  # Length L
-hz_list_init: [0, 0, 0, 0, 0, 0, 0, 0]  # Length L
-Jzz_list_init: [0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5]  # Length L-1
-INIT_PERTURB_SCALE: 0.0
-
-# NDE ARCHITECTURE (not used)
-MODEL_TYPE: "white"
-NN_MODEL_TYPE: "time_dependent"
-NN_hidden_sizes: [64]
-learn_theta: False
 
 # ============================================================================
 # MPO ARCHITECTURE - CRITICAL SETTINGS
@@ -54,14 +27,10 @@ learn_theta: False
 
 NN_TYPE: "mps"  # "mps" or "mpo"
 
-
-# Option 1: Auto-calculate optimal MPO size (recommended)
-AUTO_MPO_SIZE: False
-
 # Option 2: Manual MPO size (only used if AUTO_MPO_SIZE = False)
 MPO_SIZE: 64  #in mpo mode, it must be the cube of an integer (64, 126, 216, ...)
 
-# MPO bond dimension (rank
+# MPO bond dimension
 MAX_MPO_CHI: 4
 
 # Use simple MPO architecture for debugging
@@ -91,16 +60,6 @@ LR_FACTOR: 0.5
 USE_EARLY_STOPPING: False
 EARLY_STOP_PATIENCE: 5000
 
-
-# ============================================================================
-# CURRICULUM LEARNING
-# ============================================================================
-
-PHASE1_SPLIT: 0.4
-PHASE2_SPLIT: 0.4
-PHASE3_SPLIT: 0.2
-seed_init: 4321
-T_extrapolate_factor: 5.0
 
 # ============================================================================
 # COMPARISON SETTINGS

@@ -83,7 +83,7 @@ def print_model_parameters(model):
 
 
 #################################################################
-#1. PLOTS
+#1. PLOTS AND SAVING
 #################################################################
 
 def bar_plot_strings_comparison(strings, values1, values2, config, labels=None, 
@@ -232,6 +232,35 @@ def plot_training_loss(losses, config):
     # Adjust layout
     plt.tight_layout()
     plt.savefig(f'plots/{filename}.png', bbox_inches='tight', dpi=300)
+
+
+
+def save_learned_distribution(bitstrings, probs_np, config):
+    N = config['L']
+    chi_data = config['bond_dimension_data']
+    chi_nn = config['bond_dimension_learning']
+    kind = config['data_kind']
+    nn_type = config['NN_TYPE']
+    
+    filename_core = f"L{N}_nn-{nn_type}_kind-{kind}_Chidata{chi_data}_ChiNN{chi_nn}"
+    filename = f'results/learned_distribution_{filename_core}.npy'
+    
+    # Save as structured array with bitstrings and probabilities
+    data = np.array(list(zip(bitstrings, probs_np)))
+
+    np.save(filename, data)
+
+def save_loss_history(loss_history, config):
+    N = config['L']
+    chi_data = config['bond_dimension_data']
+    chi_nn = config['bond_dimension_learning']
+    kind = config['data_kind']
+    nn_type = config['NN_TYPE']
+    
+    filename_core = f"L{N}_nn-{nn_type}_kind-{kind}_Chidata{chi_data}_ChiNN{chi_nn}"
+    filename = f'results/loss_history_{filename_core}.npy'
+    
+    np.save(filename, np.array(loss_history))
         
 
 
@@ -1370,17 +1399,9 @@ if __name__ == "__main__":
         print("TRAINING WITH MPO NETWORK")
         print("="*60 + "\n")
         
-        # Option 1: Use automatic MPO size calculation
-        if CONFIG.get('AUTO_MPO_SIZE', True):
-            mpo_size, factor = calculate_optimal_mpo_size(
-                input_dim=L*2,
-                output_dim=NN_OUTPUT_DIM,
-                num_factors=3
-            )
-            print(f"Auto-calculated MPO size: {mpo_size} (factor={factor})")
-        else:
-            mpo_size = CONFIG['MPO_SIZE']
-            print(f"Using configured MPO size: {mpo_size}")
+
+        mpo_size = CONFIG['MPO_SIZE']
+        print(f"Using configured MPO size: {mpo_size}")
         
         # Verify MPO size
         factor = round(mpo_size ** (1/3))
@@ -1502,6 +1523,9 @@ if __name__ == "__main__":
 
     #Save weights
     print_model_parameters(NNmodel)
+
+    save_learned_distribution(bitstrings, probs_np, CONFIG)
+    save_loss_history(loss_history, CONFIG)
     
     # Plot results
     bar_plot_strings_comparison(bitstrings, normalized_counts, probs_np, CONFIG)
