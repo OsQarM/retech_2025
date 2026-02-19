@@ -8,7 +8,7 @@ bond_dimension_learning: 2
 t_max: 1.0
 initial_state_kind: "all_plus" # "all_zeros" or "all_plus"
 data_kind: 'mps' # options, mps, zeros, plus, ghz
-
+ 
 # HAMILTONIAN MODEL
 hamiltonian_type: "custom"
 x_fields: False #add local fields as rotations (not working yet)
