@@ -318,8 +318,8 @@ if __name__ == "__main__":
     
     # 1. Hamiltonian parameters
     fig_ham = plot_hamiltonian_parameters(theta_true, np.array(theta_init), 
-                                         theta_final, hamiltonian_type, L)
-    plt.show()
+                                         theta_final, hamiltonian_type, L, CONFIG)
+    #plt.show()
     
     # 2. Noise parameters (if applicable)
     if "noise_rates" in params:
@@ -348,8 +348,8 @@ if __name__ == "__main__":
         # Plot noise parameters
         if learned_noise_rates is not None:
             try:
-                fig_noise = plot_noise_parameters(learned_noise_rates, true_noise_rates, noise_model, L)
-                plt.show()
+                fig_noise = plot_noise_parameters(learned_noise_rates, true_noise_rates, noise_model, L, CONFIG)
+                #plt.show()
             except Exception as e:
                 print(f"  Warning: failed to plot noise parameters: {e}")
         else:
@@ -378,12 +378,12 @@ if __name__ == "__main__":
     # 4. Observables
     try:
         fig_obs = plot_observables(t_grid_long, obs_true, obs_model, obs_vanilla, L, hamiltonian_type, CONFIG)
-        plt.show()
+        #plt.show()
     except Exception as e:
         print(f"  Warning: failed to plot observables: {e}")
 
     # 5. Training loss
     try:
-        plot_training_loss(losses)
+        plot_training_loss(losses, CONFIG)
     except Exception as e:
         print(f"  Warning: failed to plot training loss: {e}")

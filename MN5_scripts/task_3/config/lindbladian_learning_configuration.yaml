@@ -2,7 +2,7 @@
 
 
 # SYSTEM PARAMETERS
-L: 7
+L: 4
 t_max: 1.0
 initial_state_kind: "all_plus"
 

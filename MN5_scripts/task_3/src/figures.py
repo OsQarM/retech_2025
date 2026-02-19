@@ -21,7 +21,7 @@ sys.path.append('./')
 from diagnostics import calculate_fidelity_mixed, calculate_fidelity_pure, calculate_purity
 
 
-def plot_hamiltonian_parameters(theta_true, theta_init, theta_final, hamiltonian_type, L):
+def plot_hamiltonian_parameters(theta_true, theta_init, theta_final, hamiltonian_type, L, config):
     """Plot learned vs true Hamiltonian parameters"""
     if hamiltonian_type == "uniform_xyz":
         labels = ["Jx", "Jy", "Jz", "hx", "hy", "hz"]
@@ -52,12 +52,23 @@ def plot_hamiltonian_parameters(theta_true, theta_init, theta_final, hamiltonian
     ax.legend()
     ax.grid(True, alpha=0.3)
     ax.axhline(y=0, color='black', linestyle='-', alpha=0.3, linewidth=0.5)
+
+    N = config['L']
+    h_type = config['hamiltonian_type']
+    noise =  config['use_noisy_dynamics']
+    noise_type = config['noise_model']
+
+    filename_core = f"L{N}_h_type-{h_type}_noise-{noise}_type{noise_type}"
+    filename = f'./hamiltonian_parameters_{filename_core}'
     
+    # Adjust layout
     plt.tight_layout()
+    plt.savefig(f'../plots//{filename}.png', bbox_inches='tight', dpi=300)
+
     return fig
 
 
-def plot_noise_parameters(learned_rates, true_rates, noise_model, L):
+def plot_noise_parameters(learned_rates, true_rates, noise_model, L, config):
     """Plot learned vs true noise rates"""
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 5))
     learned_rates = [abs(i) for i in learned_rates]
@@ -122,7 +133,20 @@ def plot_noise_parameters(learned_rates, true_rates, noise_model, L):
             ax2.legend()
             ax2.grid(True, alpha=0.3)
     
+
+    N = config['L']
+    h_type = config['hamiltonian_type']
+    noise =  config['use_noisy_dynamics']
+    noise_type = config['noise_model']
+
+
+    filename_core = f"L{N}_h_type-{h_type}_noise-{noise}_type{noise_type}"
+    filename = f'./noise_parameters_{filename_core}'
+    
+    # Adjust layout
     plt.tight_layout()
+    plt.savefig(f'../plots//{filename}.png', bbox_inches='tight', dpi=300)
+
     return fig
 
 
@@ -149,7 +173,19 @@ def plot_mixed_state_fidelity(traj_model, traj_vanilla, traj_true, config, t_gri
            ax2.plot(t_grid_long + 1e-12, inf_van, 'b--', label='Vanilla Infidelity')
            ax2.axvspan(0, config["t_max"], color='gray', alpha=0.1)
            ax2.set_title('Infidelity (log-log)'); ax2.legend()
-           plt.tight_layout(); plt.show()
+
+           N = config['L']
+           h_type = config['hamiltonian_type']
+           noise =  config['use_noisy_dynamics']
+           noise_type = config['noise_model']
+
+           filename_core = f"L{N}_h_type-{h_type}_noise-{noise}_type{noise_type}"
+           filename = f'./mixed_state_fidelity_{filename_core}'
+            
+           # Adjust layout
+           plt.tight_layout()
+           plt.savefig(f'../plots//{filename}.png', bbox_inches='tight', dpi=300)
+
        else:
             print("  No ground-truth trajectory available for fidelity comparison (mixed)")
 
@@ -164,7 +200,19 @@ def plot_purity(traj_model_np, traj_van_np, t_grid_long, config):
        plt.plot(t_grid_long, purity_van, 'b--', label='Vanilla Purity')
        plt.axvspan(0, config["t_max"], color='gray', alpha=0.1)
        plt.title('Purity over time'); plt.xlabel('Time'); plt.ylabel('Tr(ρ²)'); plt.legend(); plt.grid(True)
-       plt.show()
+
+       N = config['L']
+       h_type = config['hamiltonian_type']
+       noise =  config['use_noisy_dynamics']
+       noise_type = config['noise_model']
+
+
+       filename_core = f"L{N}_h_type-{h_type}_noise-{noise}_type{noise_type}"
+       filename = f'./purity_{filename_core}'
+
+       # Adjust layout
+       plt.tight_layout()
+       plt.savefig(f'../plots//{filename}.png', bbox_inches='tight', dpi=300)
 
 def plot_pure_state_fidelity(traj_model, traj_vanilla, traj_true, config, t_grid_long, L):
        psi_model_np = np.array(jax.device_get(traj_model))
@@ -182,7 +230,19 @@ def plot_pure_state_fidelity(traj_model, traj_vanilla, traj_true, config, t_grid
            ax2.plot(t_grid_long, fid_nde, 'r', label='NDE Infidelity')
            ax2.plot(t_grid_long, fid_van, 'b--', label='Vanilla Infidelity')
            ax2.axvspan(0, config["t_max"], color='gray', alpha=0.1); ax2.legend(); ax2.set_title('Infidelity')
-           plt.tight_layout(); plt.show()
+
+           N = config['L']
+           h_type = config['hamiltonian_type']
+           noise =  config['use_noisy_dynamics']
+           noise_type = config['noise_model']
+
+           filename_core = f"L{N}_h_type-{h_type}_noise-{noise}_type{noise_type}"
+           filename = f'./pure_fidelity_{filename_core}'
+
+           # Adjust layout
+           plt.tight_layout()
+           plt.savefig(f'../plots//{filename}.png', bbox_inches='tight', dpi=300)
+
        else:
            print("  No ground-truth trajectory available for fidelity comparison (pure)")
 
@@ -237,21 +297,46 @@ def plot_observables(t_grid, obs_true, obs_model, obs_vanilla, L, hamiltonian_ty
         axes[row, col].axis('off')
     
     plt.suptitle(f'Observables | L={L} | {hamiltonian_type}', fontsize=14)
+
+    N = config['L']
+    h_type = config['hamiltonian_type']
+    noise =  config['use_noisy_dynamics']
+    noise_type = config['noise_model']
+
+
+    filename_core = f"L{N}_h_type-{h_type}_noise-{noise}_type{noise_type}"
+    filename = f'./observables_{filename_core}'
+    
+    # Adjust layout
     plt.tight_layout()
+    plt.savefig(f'../plots//{filename}.png', bbox_inches='tight', dpi=300)
+
+
     return fig
 
 
-def plot_training_loss(losses):
+def plot_training_loss(losses, config):
        plt.figure(figsize=(5,4))
        plt.plot(losses)
        plt.title("Training Loss")
        plt.xlabel("Epoch")
        plt.ylabel("Loss")
        plt.grid(True)
-       plt.show()
+
+       N = config['L']
+       h_type = config['hamiltonian_type']
+       noise =  config['use_noisy_dynamics']
+       noise_type = config['noise_model']
+
+       filename_core = f"L{N}_h_type-{h_type}_noise-{noise}_type{noise_type}"
+       filename = f'./loss_{filename_core}'
+
+       # Adjust layout
+       plt.tight_layout()
+       plt.savefig(f'../plots//{filename}.png', bbox_inches='tight', dpi=300)
 
 
-def plot_final_probabilities(bitstrings, counts_shots, probs_model, probs_vanilla, labels = None):
+def plot_final_probabilities(bitstrings, counts_shots, probs_model, probs_vanilla, config, labels = None):
 
     sum_counts = sum(counts_shots)
     counts_shots = [i/sum_counts for i in counts_shots]
@@ -270,5 +355,15 @@ def plot_final_probabilities(bitstrings, counts_shots, probs_model, probs_vanill
     ax.legend()
     ax.grid(axis='y', alpha=0.3)
     
+    N = config['L']
+    h_type = config['hamiltonian_type']
+    noise =  config['use_noisy_dynamics']
+    noise_type = config['noise_model']
+
+
+    filename_core = f"L{N}_h_type-{h_type}_noise-{noise}_type{noise_type}"
+    filename = f'./final_probabilities_{filename_core}'
+    
+    # Adjust layout
     plt.tight_layout()
-    plt.show()
+    plt.savefig(f'../plots//{filename}.png', bbox_inches='tight', dpi=300)
