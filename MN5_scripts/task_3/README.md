@@ -1,3 +1,5 @@
+## Hamiltonian learning in HPC
+
 
 This directory contains the scripts necessary to generate simulated data of a time evolution, and a ML algorithm to learn the Hamiltonian that generates de trajectories of the simulated data.
 
@@ -16,17 +18,17 @@ Important: Both scripts print information on the terminal that is also relevant 
 Here are the instructions to run a simple validation of the program:
 
 1. To generate data, all the relevant parameters are in the configuration file 'data_generation_configuration.yaml'. The important ones are:
-    L: System size (relevant for a scalability test in HPC)
-    N_shots_per_time: measurement sample size. If using large L, it needs to be increased from the default value
-    hamiltonian_type: We tested two kinds of Hamiltonian. The parameters under allow to configure the parameters of the chosen Hamiltonian
-    dynamics_type: Allows to run model with or without noise. The rest of the parameters allow for the configuration of the noise model
+    - L: System size (relevant for a scalability test in HPC)
+    - N_shots_per_time: measurement sample size. If using large L, it needs to be increased from the default value
+    - hamiltonian_type: We tested two kinds of Hamiltonian. The parameters under allow to configure the parameters of the chosen Hamiltonian
+    - dynamics_type: Allows to run model with or without noise. The rest of the parameters allow for the configuration of the noise model
 
     For a simple test we recommend leaving the hamiltonian_type as 'uniform_xyz' and dynamics_type as 'schrodinger'. After finishing with the configuration, the only thing needed is to run the first script with 'python _01_generate_data.py'
 
 2. The ML script contains some more configuration options in the file 'lindbladian_learning_configuration.yaml'. These are the most important:
-    L: Again, this is the system size. But you have to make sure that there is an existing data file with that size already
-    After that, comes the hamiltonian_type (again, make sure data has been generated before), and configuration of noise parameters (if noisy data has been generated)
-    The rest of the parameters have to do with initialization and training parameters, which in principle work well for all tests performed until now
+    - L: Again, this is the system size. But you have to make sure that there is an existing data file with that size already
+    - After that, comes the hamiltonian_type (again, make sure data has been generated before), and configuration of noise parameters (if noisy data has been generated)
+    - The rest of the parameters have to do with initialization and training parameters, which in principle work well for all tests performed until now
 
     The second script is ran with 'python _02_LL_MLP_refactored.py', and it should store all the output properly
 
