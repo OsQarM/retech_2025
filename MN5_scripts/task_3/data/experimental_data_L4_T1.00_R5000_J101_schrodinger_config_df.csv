@@ -1,0 +1,2 @@
+L,t_max,dt,N_time_shots,N_shots_per_time,initial_state_kind,seed_data,hamiltonian_type,Jx_true,Jy_true,Jz_true,hx_true,hy_true,hz_true,hx_list_true,hz_list_true,Jzz_list_true,dynamics_type,noise_model,T1_global,T2_global,T1_list,T2_list
+4,1.0,0.01,101,5000,all_plus,1234,uniform_xyz,0.9,1.1,0.4,0.3,0.1,0.2,"[0.3, 0.8, 0.4, 0.9]","[0.65, 0.2, 0.15, 0.43]","[0.4, 0.25, 0.8]",schrodinger,global,10.0,5.0,"[10.0, 15.0, 12.0, 8.0]","[5.0, 6.0, 4.0, 7.0]"
