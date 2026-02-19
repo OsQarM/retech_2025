@@ -58,7 +58,7 @@ def plot_hamiltonian_parameters(theta_true, theta_init, theta_final, hamiltonian
     noise =  config['use_noisy_dynamics']
     noise_type = config['noise_model']
 
-    filename_core = f"L{N}_h_type-{h_type}_noise-{noise}_type{noise_type}"
+    filename_core = f"L{N}_h_type-{h_type}_noise-{noise}_type-{noise_type}"
     
     # Save parameters to .npy files
     np.save(f'../results/hamiltonian_true_{filename_core}.npy', theta_true)
@@ -146,7 +146,7 @@ def plot_noise_parameters(learned_rates, true_rates, noise_model, L, config):
     noise_type = config['noise_model']
 
 
-    filename_core = f"L{N}_h_type-{h_type}_noise-{noise}_type{noise_type}"
+    filename_core = f"L{N}_h_type-{h_type}_noise-{noise}_type-{noise_type}"
 
     # Save noise parameters
     np.save(f'../results/noise_true_{filename_core}.npy', true_rates)
@@ -190,7 +190,7 @@ def plot_mixed_state_fidelity(traj_model, traj_vanilla, traj_true, config, t_gri
            noise =  config['use_noisy_dynamics']
            noise_type = config['noise_model']
 
-           filename_core = f"L{N}_h_type-{h_type}_noise-{noise}_type{noise_type}"
+           filename_core = f"L{N}_h_type-{h_type}_noise-{noise}_type-{noise_type}"
 
            # Save trajectories and fidelities
            np.save(f'../results/traj_model_{filename_core}.npy', traj_model_np)
@@ -227,7 +227,7 @@ def plot_purity(traj_model_np, traj_van_np, t_grid_long, config):
        noise_type = config['noise_model']
 
 
-       filename_core = f"L{N}_h_type-{h_type}_noise-{noise}_type{noise_type}"
+       filename_core = f"L{N}_h_type-{h_type}_noise-{noise}_type-{noise_type}"
 
        # Save purity data
        np.save(f'../results/purity_model_{filename_core}.npy', purity_model)
@@ -261,7 +261,7 @@ def plot_pure_state_fidelity(traj_model, traj_vanilla, traj_true, config, t_grid
            noise =  config['use_noisy_dynamics']
            noise_type = config['noise_model']
 
-           filename_core = f"L{N}_h_type-{h_type}_noise-{noise}_type{noise_type}"
+           filename_core = f"L{N}_h_type-{h_type}_noise-{noise}_type-{noise_type}"
 
            # Save trajectories and fidelities
            np.save(f'../results/psi_model_{filename_core}.npy', psi_model_np)
@@ -335,7 +335,7 @@ def plot_observables(t_grid, obs_true, obs_model, obs_vanilla, L, hamiltonian_ty
     h_type = config['hamiltonian_type']
     noise =  config['use_noisy_dynamics']
     noise_type = config['noise_model']
-    filename_core = f"L{N}_h_type-{h_type}_noise-{noise}_type{noise_type}"
+    filename_core = f"L{N}_h_type-{h_type}_noise-{noise}_type-{noise_type}"
 
     # Save observables
     if obs_true is not None:
@@ -366,7 +366,7 @@ def plot_training_loss(losses, config):
        noise =  config['use_noisy_dynamics']
        noise_type = config['noise_model']
 
-       filename_core = f"L{N}_h_type-{h_type}_noise-{noise}_type{noise_type}"
+       filename_core = f"L{N}_h_type-{h_type}_noise-{noise}_type-{noise_type}"
 
 
        # Save loss history
@@ -403,7 +403,7 @@ def plot_final_probabilities(bitstrings, counts_shots, probs_model, probs_vanill
     noise_type = config['noise_model']
 
 
-    filename_core = f"L{N}_h_type-{h_type}_noise-{noise}_type{noise_type}"
+    filename_core = f"L{N}_h_type-{h_type}_noise-{noise}_type-{noise_type}"
     filename = f'./final_probabilities_{filename_core}'
     
     # Adjust layout
