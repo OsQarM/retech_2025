@@ -3,11 +3,11 @@ This directory contains the scripts necessary to generate simulated data of a ti
 
 First, the required libraries are:
 
-numpy
-matplotlib
-pandas
-pyyaml
-jax
+- numpy
+- matplotlib
+- pandas
+- pyyaml
+- jax
 
 The folder 'scripts' contains the two .py scripts for the data generation and Hamiltonian learning tasks. They each use a configuration file located in the 'config' folder. The first script: '_01_generate_data.py' stores the data file and its metadata in the folder 'data'. The second script: '_02_LL_MLP_refactored.py' reads from these files and stores the output in the 'results' and 'plots' folder.
 
@@ -17,6 +17,7 @@ Here are the instructions to run a simple validation of the program:
 
 1. To generate data, all the relevant parameters are in the configuration file 'data_generation_configuration.yaml'. The important ones are:
     L: System size (relevant for a scalability test in HPC)
+    N_shots_per_time: measurement sample size. If using large L, it needs to be increased from the default value
     hamiltonian_type: We tested two kinds of Hamiltonian. The parameters under allow to configure the parameters of the chosen Hamiltonian
     dynamics_type: Allows to run model with or without noise. The rest of the parameters allow for the configuration of the noise model
 
