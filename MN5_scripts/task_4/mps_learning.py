@@ -15,6 +15,8 @@ import yaml
 import matplotlib.pyplot as plt
 import torchtt as tntt 
 
+import os
+
 
 ##
 
@@ -76,6 +78,93 @@ def print_model_parameters(model):
 
 
 
+def load_and_convert_to_mpo(model_path, config):
+    """
+    Load a trained dense model and convert it to MPO format.
+    
+    Args:
+        model_path: Path to saved dense model
+        config: Configuration dictionary
+        compression_rank: Bond dimension for MPO compression (if None, uses config value)
+    """
+    
+    print("\n" + "="*60)
+    print("PHASE 2: LOADING AND CONVERTING TO MPO")
+    print("="*60)
+    
+    # Load the saved dense model
+    checkpoint = torch.load(model_path)
+    print(f"Loaded model from: {model_path}")
+    
+
+    compression_rank = config.get('MAX_MPO_CHI', 2)
+    
+    # Create MPO model (use_mpo=True)
+    mpo_model = NeuralNetworkMPO(
+        L=config['L'],
+        mpo_size=config['MPO_SIZE'],
+        output_dim=checkpoint['final_params']['theta'].shape[0],  # Get from saved params
+        max_bond_dim=compression_rank,
+        use_mpo=True  # IMPORTANT: Use MPO for inference
+    )
+    
+    # First, load the embedding, hidden, and output layers from dense model
+    dense_state_dict = checkpoint['model_state_dict']
+    
+    # Filter state dict to only load non-MPO layers first
+    mpo_state_dict = mpo_model.state_dict()
+    
+    # Copy weights for all layers except fc_mpo (we'll handle separately)
+    for name, param in dense_state_dict.items():
+        if name in mpo_state_dict and 'fc_mpo' not in name:
+            mpo_state_dict[name].copy_(param)
+            print(f"  Loaded: {name}")
+    
+    # Load the partially filled state dict
+    mpo_model.load_state_dict(mpo_state_dict, strict=False)
+    
+    # Now handle the MPO layer specially
+    print("\n🔄 Converting dense fc_mpo layer to MPO format...")
+    
+    # Extract the trained dense weights for fc_mpo
+    dense_fc_mpo_weight = dense_state_dict['fc_mpo.weight']
+    dense_fc_mpo_bias = dense_state_dict['fc_mpo.bias']
+    
+    # Use our custom method to load dense weights into MPO format
+    mpo_model.load_dense_weights(dense_fc_mpo_weight, dense_fc_mpo_bias)
+    
+    print(f"✅ MPO conversion complete with bond dimension = {compression_rank}")
+    print(f"   Original dense weights: {dense_fc_mpo_weight.shape}")
+    print(f"   MPO cores: {[core.shape for core in mpo_model.mpo.tt_matrix.cores]}")
+    
+    return mpo_model, checkpoint
+
+
+def run_mpo_inference(mpo_model, input_data, psi0, OPS_LIST, config, t_grid_fine):
+    """
+    Run inference with the MPO-compressed model.
+    """
+    print("\n" + "="*60)
+    print("PHASE 3: INFERENCE WITH MPO MODEL")
+    print("="*60)
+    
+    # Set to evaluation mode
+    mpo_model.eval()
+    
+    # Run inference
+    with torch.no_grad():  # No gradients needed for inference
+        # Forward pass through MPO model
+        output_params = mpo_model(input_data)
+        
+        # Create parameter dictionary
+        predicted_params = create_parameter_dict(output_params, OPS_LIST, config)
+        
+        # Physics computation
+        psi_final = physics_computation(predicted_params, psi0, OPS_LIST, config, t_grid_fine)
+    
+    print("✅ Inference complete")
+    
+    return  predicted_params, psi_final
 
 ##
 
@@ -204,11 +293,11 @@ def bar_plot_strings_comparison(strings, values1, values2, config, labels=None,
     kind = config['data_kind']
     nn_type = config['NN_TYPE']
     filename_core = f"L{N}_nn-{nn_type}_kind-{kind}_Chidata{chi_data}_ChiNN{chi_nn}"
-    filename = f'./training_loss_{filename_core}'
+    filename = f'./bitstring_comparison_{filename_core}'
     
     # Adjust layout
     plt.tight_layout()
-    plt.savefig(f'plots/{filename}.png', bbox_inches='tight', dpi=300)
+    plt.savefig(f'./plots/{filename}.png', bbox_inches='tight', dpi=300)
     
     return fig, ax, (bars1, bars2) if style != 'stacked' else (bars1, bars2)
 
@@ -231,7 +320,7 @@ def plot_training_loss(losses, config):
 
     # Adjust layout
     plt.tight_layout()
-    plt.savefig(f'plots/{filename}.png', bbox_inches='tight', dpi=300)
+    plt.savefig(f'./plots/{filename}.png', bbox_inches='tight', dpi=300)
 
 
 
@@ -756,6 +845,19 @@ class NeuralNetworkMPO(nn.Module):
             x = x.squeeze(0)  # Remove batch dimension
         
         return x
+    
+    def load_dense_weights(self, dense_weights, dense_bias):
+        """Load pre-trained dense weights into MPO format."""
+        with torch.no_grad():
+            # Decompose dense weights to TT format
+            W_np = dense_weights.cpu().numpy()
+            b_np = dense_bias.cpu().numpy()
+            self.mpo.init_from_weights(W_np, b_np)
+            self.mpo_ready = True
+            
+            # Also store in fc_mpo for reference
+            self.fc_mpo.weight.data = dense_weights
+            self.fc_mpo.bias.data = dense_bias
 
 
 class SimpleMPONetwork(nn.Module):
@@ -842,9 +944,6 @@ class SimpleMPONetwork(nn.Module):
 # ============================================================================
 
 class TrainableMPOLayer(nn.Module):
-    """
-    FIXED: Proper tensor indexing for einsum operations.
-    """
     
     def __init__(self, input_dim, output_dim, factors, bond_dim=2):
         super(TrainableMPOLayer, self).__init__()
@@ -1440,7 +1539,8 @@ if __name__ == "__main__":
                 mpo_size=mpo_size,
                 output_dim=NN_OUTPUT_DIM,
                 max_bond_dim=CONFIG.get('MAX_MPO_CHI', 2),
-                use_mpo=CONFIG.get('MPO_ON', True)
+                use_mpo=False
+                #use_mpo=CONFIG.get('MPO_ON', True)
             )
         
         # Train
@@ -1487,10 +1587,28 @@ if __name__ == "__main__":
     else:
         raise ValueError(f"Unknown NN_TYPE: {network_type}")
     
+
+    # Save the trained dense model
+    save_path = f"./saved_models/dense_model_L{CONFIG['L']}_chi{CONFIG['bond_dimension_learning']}.pt"
+    os.makedirs("./saved_models", exist_ok=True)
+    
+    torch.save({
+        'model_state_dict': NNmodel.state_dict(),
+        'config': CONFIG,
+        'loss_history': loss_history,
+        'final_params': final_params
+    }, save_path)
+    
+    print(f"\n✅ Dense model saved to: {save_path}")
+    
     # ========================================================================
     # EVALUATE RESULTS
     # ========================================================================
-    
+
+    if CONFIG['MPO_ON'] == True and CONFIG['NN_TYPE'] == 'mpo':
+        mpo_model, checkpoint = load_and_convert_to_mpo(save_path, CONFIG)
+        predicted_params, psi_final = run_mpo_inference(mpo_model, single_qubit_probs, psi0, OPS_LIST, CONFIG, t_grid_fine)
+
     print("\n" + "="*60)
     print("TRAINING COMPLETE")
     print("="*60 + "\n")

@@ -1,6 +1,6 @@
 # config.yaml
 
-L: 4
+L: 8
 t_max: 1.0
 dt: 0.01
 N_time_shots: 101

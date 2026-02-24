@@ -25,13 +25,13 @@ seed_init: 4321
 # MPO ARCHITECTURE - CRITICAL SETTINGS
 # ============================================================================
 
-NN_TYPE: "mps"  # "mps" or "mpo"
+NN_TYPE: "mpo"  # "mps" or "mpo"
 
 # Option 2: Manual MPO size (only used if AUTO_MPO_SIZE = False)
 MPO_SIZE: 64  #in mpo mode, it must be the cube of an integer (64, 126, 216, ...)
 
 # MPO bond dimension
-MAX_MPO_CHI: 4
+MAX_MPO_CHI: 128
 
 # Use simple MPO architecture for debugging
 SIMPLE_MPO: False  # Set to True if having convergence issues
