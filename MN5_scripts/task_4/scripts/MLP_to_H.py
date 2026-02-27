@@ -21,6 +21,8 @@ import os
 sys.path.append('../src/')
 
 from run_inference import run_inference
+from plots import bar_plot_strings_comparison, plot_training_loss
+
 
 '''Script to learn distribution of Multiverse model
 
@@ -79,6 +81,15 @@ def create_filename_core(config):
     filename_core = f"L{N}_nn-{nn_type}_kind-{kind}_Chidata{chi_data}_ChiNN{chi_nn}"
 
     return filename_core
+
+def generate_bitstring_list(nqubits):
+    '''Create list containing all possible bitstrings of the N-qubit chain'''
+    bitstrings = []
+    decimal_bitstrings = range(0, 2**nqubits)
+    int_bitstrings = [bin(i)[2:].zfill(nqubits) for i in decimal_bitstrings]
+    bitstrings =  [str(bit) for bit in int_bitstrings]
+
+    return bitstrings
 
 
 ##########################################
@@ -556,7 +567,52 @@ if __name__ == "__main__":
     
     print(f"\n✅ Model saved to: {save_path}")
 
+    print("\n" + "="*60)
+    print("TRAINING COMPLETE")
+    print("="*60 + "\n")
     
+    # Compute final probabilities
+    probs_final = torch.abs(psi_final)**2
+    probs_np = probs_final.detach().numpy()
+    probs_np = probs_np / probs_np.sum()
+    
+    # Normalize counts
+    normalized_counts = bitstring_probs / bitstring_probs.sum()
+    
+    # Calculate divergence
+    total_divergence = np.sum(np.abs(normalized_counts - probs_np))
+    print(f"Total probability divergence: {total_divergence:.6f}")
+    
+    # Calculate KL divergence
+    epsilon = 1e-10
+    kl_div = np.sum(
+        normalized_counts * np.log((normalized_counts + epsilon) / (probs_np + epsilon))
+    )
+    print(f"KL divergence: {kl_div:.6f}")
+    
+    # Print learned parameters
+    print("\nLearned parameters:")
+    for key, val in final_params.items():
+        if isinstance(val, torch.Tensor):
+            val_np = val.detach().numpy()
+            print(f"  {key}: {val_np}")
+
+    
+    bitstrings = generate_bitstring_list(L)
+
+    #Save results
+    filename = f'../results/loss_history_{file_core}.npy'
+    np.save(filename, np.array(loss_history))
+
+    filename = f'../results/learned_distribution_{file_core}.npy'
+    data = np.array(list(zip(bitstrings, probs_np)))
+    
+    # Plot results
+    bar_plot_strings_comparison(bitstrings, normalized_counts, probs_np, CONFIG)
+    plot_training_loss(loss_history, CONFIG)
+    
+    print("\nPlots saved!")
+
           
 
           

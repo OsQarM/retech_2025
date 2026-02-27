@@ -1,4 +1,5 @@
 import matplotlib.pyplot as plt
+import numpy as np
 
 def bar_plot_strings_comparison(strings, values1, values2, config, labels=None, 
                                 title="Learned bitstring probabilities", xlabel="Bitstrings", 
