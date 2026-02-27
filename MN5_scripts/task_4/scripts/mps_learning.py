@@ -352,8 +352,6 @@ def save_loss_history(loss_history, config):
     np.save(filename, np.array(loss_history))
         
 
-
-
 #################################################################
 #2. DATA LOADING AND PRE-PROCESSING
 #################################################################
@@ -1264,9 +1262,7 @@ def evolve_state(psi_t, H, t_grid):
 
 
 def time_evolution(psi, theta, OPS_LIST, L, t_grid):
-
     H = build_hamiltonian(L, theta, OPS_LIST)
-
     psi_t = evolve_state(psi, H, t_grid)
 
     return psi_t

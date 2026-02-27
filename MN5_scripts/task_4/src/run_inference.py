@@ -2,9 +2,9 @@
 import numpy as np
 from model import NeuralNetwork
 
-def main():
+def run_inference(x, max_bond = 128, use_mpo = True):
     # network dimensions (must match training)
-    nn = NeuralNetwork(784, 1000, 1000, 10)
+    nn = NeuralNetwork(784, 1000, 1000, 10, max_bond)
 
     # load trained weights
     nn.weights_ih1 = np.load("weights/weights_ih1.npy")
@@ -17,11 +17,8 @@ def main():
     nn.bias_h2o    = np.load("weights/bias_h2o.npy")
 
     # enable MPO inference (second layer only)
-    nn.use_mpo = True
+    nn.use_mpo = use_mpo
     nn.mpo_ready = False   # force fresh MPO build
-
-    # load ONE input (saved during training)
-    x = np.load("weights/example_input.npy")
 
     # run inference
     out = nn.feedforward(x)
@@ -29,7 +26,6 @@ def main():
 
     print("Predicted class:", pred)
 
-if __name__ == "__main__":
-    main()
+    return out, pred
 
 

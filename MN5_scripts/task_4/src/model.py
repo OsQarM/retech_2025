@@ -4,7 +4,7 @@ from mpo_tenpy import MPOLinearTorchTT
 
 
 class NeuralNetwork:
-    def __init__(self, num_inputs, num_hiddenNodes1, num_hiddenNodes2, num_outputs):
+    def __init__(self, num_inputs, num_hiddenNodes1, num_hiddenNodes2, num_outputs, max_bond):
         self.num_inputs = num_inputs
         self.num_hiddenNodes1 = num_hiddenNodes1
         self.num_hiddenNodes2 = num_hiddenNodes2
@@ -18,7 +18,7 @@ class NeuralNetwork:
         self.bias_h1h2 = np.zeros((num_hiddenNodes2, 1))
         self.bias_h2o = np.zeros((num_outputs, 1))
 
-        self.mpo = MPOLinearTorchTT(factors=[10, 10, 10], max_bond=128)
+        self.mpo = MPOLinearTorchTT(factors=[10, 10, 10], max_bond=max_bond)
         self.use_mpo = False
         self.mpo_ready = False
 
