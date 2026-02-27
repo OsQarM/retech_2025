@@ -2,12 +2,10 @@
 # This configuration includes fixes and optimal settings for MPO convergence
 
 # SYSTEM PARAMETERS
-L: 4
-bond_dimension_data: 4
+L: 10
 bond_dimension_learning: 2
 t_max: 1.0
 initial_state_kind: "all_plus" # "all_zeros" or "all_plus"
-data_kind: 'mps' # options, mps, zeros, plus, ghz
  
 # HAMILTONIAN MODEL
 hamiltonian_type: "custom"
@@ -17,48 +15,34 @@ z_fields: False
 
 # TRAINING PARAMETERS - IMPROVED FOR MPO
 dt: 0.01
-N_epochs: 500 
+N_epochs: 120
 learning_rate: 0.01 
-print_every: 50
+print_every: 10
 seed_init: 4321
+learning_mode: 'output_only' # 'output_only' or 'output_from_input'
 # ============================================================================
 # MPO ARCHITECTURE - CRITICAL SETTINGS
 # ============================================================================
 
-NN_TYPE: "mpo"  # "mps" or "mpo"
+MLP_input_size: 784
 
-# Option 2: Manual MPO size (only used if AUTO_MPO_SIZE = False)
-MPO_SIZE: 64  #in mpo mode, it must be the cube of an integer (64, 126, 216, ...)
-
-# MPO bond dimension
-MAX_MPO_CHI: 128
-
-# Use simple MPO architecture for debugging
-SIMPLE_MPO: False  # Set to True if having convergence issues
-
-TRAINABLE_MPO: False #train the mpo parameters
+MLP_output_size: 10
 
 # MPO mode toggle
-MPO_ON: True  # Actually use MPO decomposition
+MPO_ON: False  # Actually use MPO decomposition
+
+# MPO bond dimension
+MAX_MPO_CHI: 2
+
 
 # ============================================================================
 # REGULARIZATION AND STABILITY
 # ============================================================================
 
 lambda_reg: 0.01  # L2 regularization on parameters
-noise_reg: 0.001
 
 # Gradient clipping (handled in training function)
 GRAD_CLIP_NORM: 1.0
-
-# Learning rate schedule
-USE_LR_SCHEDULER: False
-LR_PATIENCE: 2000
-LR_FACTOR: 0.5
-
-# Early stopping
-USE_EARLY_STOPPING: False
-EARLY_STOP_PATIENCE: 5000
 
 
 # ============================================================================
