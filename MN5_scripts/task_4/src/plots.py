@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 
-def bar_plot_strings_comparison(strings, values1, values2, config, labels=None, 
+def bar_plot_strings_comparison(strings, values1, values2, file_core, labels=None, 
                                 title="Learned bitstring probabilities", xlabel="Bitstrings", 
                                 ylabel="Probability", colors=None, edgecolor='black', 
                                 figsize=(12, 7), style='grouped', alpha=0.8):
@@ -113,13 +113,7 @@ def bar_plot_strings_comparison(strings, values1, values2, config, labels=None,
     # Add grid for better readability
     ax.grid(axis='y', alpha=0.3, linestyle='--')
 
-    N = config['L']
-    chi_data = config['bond_dimension_data']
-    chi_nn = config['bond_dimension_learning']
-    kind = config['data_kind']
-    nn_type = config['NN_TYPE']
-    filename_core = f"L{N}_nn-{nn_type}_kind-{kind}_Chidata{chi_data}_ChiNN{chi_nn}"
-    filename = f'./bitstring_comparison_{filename_core}'
+    filename = f'bitstring_comparison_{file_core}'
     
     # Adjust layout
     plt.tight_layout()
@@ -128,7 +122,7 @@ def bar_plot_strings_comparison(strings, values1, values2, config, labels=None,
     return fig, ax, (bars1, bars2) if style != 'stacked' else (bars1, bars2)
 
 
-def plot_training_loss(losses, config):
+def plot_training_loss(losses, file_core):
     plt.figure(figsize=(5,4))
     plt.plot(list(range(1, len(losses)+1)), losses)
     plt.title("Training Loss")
@@ -136,13 +130,7 @@ def plot_training_loss(losses, config):
     plt.ylabel("Loss")
     plt.grid(True)
 
-    N = config['L']
-    chi_data = config['bond_dimension_data']
-    chi_nn = config['bond_dimension_learning']
-    kind = config['data_kind']
-    nn_type = config['NN_TYPE']
-    filename_core = f"L{N}_nn-{nn_type}_kind-{kind}_Chidata{chi_data}_ChiNN{chi_nn}"
-    filename = f'./training_loss_{filename_core}'
+    filename = f'training_loss_{file_core}'
 
     # Adjust layout
     plt.tight_layout()

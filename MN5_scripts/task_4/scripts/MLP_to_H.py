@@ -71,14 +71,13 @@ def load_config(config_path):
         config = yaml.safe_load(file)
     return config
 
-def create_filename_core(config):
-    N = config['L']
-    chi_data = config['bond_dimension_data']
+def create_filename_core(config, N):
     chi_nn = config['bond_dimension_learning']
-    kind = config['data_kind']
-    nn_type = config['NN_TYPE']
+    kind = config['learning_mode']
+    chi_mpo = config['MAX_MPO_CHI']
+    mpo_on = config['MPO_ON']
     
-    filename_core = f"L{N}_nn-{nn_type}_kind-{kind}_Chidata{chi_data}_ChiNN{chi_nn}"
+    filename_core = f"L{N}_chi_nn-{chi_nn}_kind-{kind}_Chimpo-{chi_mpo}_MPO-{mpo_on}_class-7"
 
     return filename_core
 
@@ -166,9 +165,9 @@ def time_evolution(psi, theta, OPS_LIST, L, t_grid):
     return psi_t
 
 
-def physics_computation(params, psi0, OPS_LIST, CONFIG, t_grid):
-    #psi_rot = compute_rotations_corrected(psi0, params, CONFIG['L'])
-    psi_t = time_evolution(psi0, params['theta'], OPS_LIST, CONFIG['L'], t_grid)
+def physics_computation(params, psi0, OPS_LIST, L, t_grid):
+    #psi_rot = compute_rotations_corrected(psi0, params, L)
+    psi_t = time_evolution(psi0, params['theta'], OPS_LIST, L, t_grid)
     return psi_t
 
 
@@ -346,7 +345,7 @@ def nll(psi, counts):
     return loss_nll
 
 
-def train_model(model, n_epochs, input_data, psi0, OPS_LIST, CONFIG, 
+def train_model(model, n_epochs, input_data, psi0, OPS_LIST, L, CONFIG, 
                         t_grid_fine, learning_rate, counts_shots, print_every=50):
     """
     Improved training function with better convergence.
@@ -366,10 +365,10 @@ def train_model(model, n_epochs, input_data, psi0, OPS_LIST, CONFIG,
         
         # Forward pass
         output_params = model(input_data)
-        predicted_params = create_parameter_dict(output_params, OPS_LIST, CONFIG)
+        predicted_params = create_parameter_dict(output_params, OPS_LIST, L, CONFIG)
         
         # Physics computation
-        psi_t = physics_computation(predicted_params, psi0, OPS_LIST, CONFIG, t_grid_fine)
+        psi_t = physics_computation(predicted_params, psi0, OPS_LIST, L, t_grid_fine)
         
         # Compute loss
         loss = nll(psi_t, counts_shots)
@@ -403,7 +402,7 @@ def train_model(model, n_epochs, input_data, psi0, OPS_LIST, CONFIG,
     return model, predicted_params, psi_t, loss_history
 
 
-def create_parameter_dict(params, OPS_LIST, CONFIG):
+def create_parameter_dict(params, OPS_LIST, L, CONFIG):
     """
     Create parameter dictionary from model output.
     FIXED: Better handling of parameter shapes.
@@ -423,9 +422,6 @@ def create_parameter_dict(params, OPS_LIST, CONFIG):
     n_hamiltonian = len(OPS_LIST)
     predicted_params['theta'] = params[idx:idx + n_hamiltonian]
     idx += n_hamiltonian
-    
-    # 2. Rotation parameters
-    L = CONFIG['L']
     
     #Not used
     for field in ['x', 'y', 'z']:
@@ -464,16 +460,17 @@ if __name__ == "__main__":
     MLP_output_size = CONFIG['MLP_output_size']
     CHI = CONFIG['bond_dimension_learning']
     learning_mode = CONFIG['learning_mode']
-    MLP_input_path = CONFIG['MLP_input_path']
+    MLP_input_folder = CONFIG['MLP_input_folder']
+    MLP_input_file = CONFIG['MLP_input_file']
     use_mpo = CONFIG['MPO_ON']
     max_mpo_chi = CONFIG['MAX_MPO_CHI']
 
 
     #Load input
-    input_data = np.load(f"{MLP_input_path}")
+    input_data = np.load(f"{MLP_input_file}")
 
     #Run inference with MLP model
-    bitstring_probs, prediction = run_inference(input_data, use_mpo, max_mpo_chi)
+    bitstring_probs, prediction = run_inference(input_data, MLP_input_folder, use_mpo, max_mpo_chi)
 
     #Prepare initial state depending on the learning mode selected
     if learning_mode == 'output_only':
@@ -485,13 +482,20 @@ if __name__ == "__main__":
 
     elif learning_mode == 'output_from_input':
         L = min_power_of_2(MLP_input_size)
-        psi0 = initial_state_from_input(L, MLP_input_path)
+        psi0 = initial_state_from_input(L, input_data.flatten())
 
         print(f"Learning output from input of size {MLP_input_size} with {L} qubits")
 
     dim = 2**L
     #Input of training NN
     mps_input_probs = torch.ones((1, L, 2))
+
+    #Add missing zeros to bistring probs
+    if len(bitstring_probs) < dim:
+        # Create padded array with zeros
+        padded_probs = np.zeros(dim)
+        padded_probs[:len(bitstring_probs)] = bitstring_probs
+        bitstring_probs = padded_probs
 
 
     # Initialize Hamiltonian operators
@@ -517,7 +521,6 @@ if __name__ == "__main__":
     print(f"  Output dim: {NN_OUTPUT_DIM} parameters")
     print(f"  - Hamiltonian: {NUM_COEFFICIENTS}")
     print(f"  - Rotations: {NN_OUTPUT_DIM - NUM_COEFFICIENTS}")
-    print("TRAINING WITH MPS NETWORK")
     print(f"{'='*60}\n")
     
     # Training parameters
@@ -545,6 +548,7 @@ if __name__ == "__main__":
         mps_input_probs, 
         psi0, 
         OPS_LIST, 
+        L,
         CONFIG, 
         t_grid_fine, 
         learning_rate, 
@@ -554,7 +558,7 @@ if __name__ == "__main__":
 
     # Save model
 
-    file_core = create_filename_core(CONFIG)
+    file_core = create_filename_core(CONFIG, L)
     save_path = f"../saved_models/MPS-model_{file_core}.pt"
     os.makedirs("../saved_models", exist_ok=True)
     
@@ -578,6 +582,7 @@ if __name__ == "__main__":
     
     # Normalize counts
     normalized_counts = bitstring_probs / bitstring_probs.sum()
+
     
     # Calculate divergence
     total_divergence = np.sum(np.abs(normalized_counts - probs_np))
@@ -597,10 +602,14 @@ if __name__ == "__main__":
             val_np = val.detach().numpy()
             print(f"  {key}: {val_np}")
 
-    
+
     bitstrings = generate_bitstring_list(L)
 
     #Save results
+
+    filename = f'../results/learned_hamiltonian_{file_core}'
+    np.savez(filename, np.array(final_params))
+
     filename = f'../results/loss_history_{file_core}.npy'
     np.save(filename, np.array(loss_history))
 
@@ -608,24 +617,8 @@ if __name__ == "__main__":
     data = np.array(list(zip(bitstrings, probs_np)))
     
     # Plot results
-    bar_plot_strings_comparison(bitstrings, normalized_counts, probs_np, CONFIG)
-    plot_training_loss(loss_history, CONFIG)
+    limit = int(MLP_output_size)
+    bar_plot_strings_comparison(bitstrings[0:limit], normalized_counts[0:limit], probs_np[0:limit], file_core)
+    plot_training_loss(loss_history, file_core)
     
     print("\nPlots saved!")
-
-          
-
-          
-        
-
-
-
-
-
-
-
-
-
-
-
-

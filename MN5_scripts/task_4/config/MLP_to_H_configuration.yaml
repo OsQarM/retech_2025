@@ -2,10 +2,9 @@
 # This configuration includes fixes and optimal settings for MPO convergence
 
 # SYSTEM PARAMETERS
-L: 10
 bond_dimension_learning: 2
-t_max: 1.0
-initial_state_kind: "all_plus" # "all_zeros" or "all_plus"
+t_max: 20.0
+initial_state_kind: "all_zeros" # "all_zeros" or "all_plus"
  
 # HAMILTONIAN MODEL
 hamiltonian_type: "custom"
@@ -14,17 +13,22 @@ y_fields: False
 z_fields: False
 
 # TRAINING PARAMETERS - IMPROVED FOR MPO
-dt: 0.01
-N_epochs: 120
+dt: 0.1
+N_epochs: 70
 learning_rate: 0.01 
-print_every: 10
+print_every: 5
 seed_init: 4321
-learning_mode: 'output_only' # 'output_only' or 'output_from_input'
+learning_mode: 'output_from_input' # 'output_only' or 'output_from_input'
 # ============================================================================
 # MPO ARCHITECTURE - CRITICAL SETTINGS
 # ============================================================================
 
+MLP_input_folder: '/Users/omichel/Desktop/qilimanjaro/projects/retech/RETECH_NN_MPO/weights/'
+MLP_input_file:   '/Users/omichel/Desktop/qilimanjaro/projects/retech/RETECH_NN_MPO/weights/example_input_0.npy'
 MLP_input_size: 784
+
+#For inference only
+H_input_path: '/Users/omichel/Desktop/qilimanjaro/projects/retech/retech_2025/MN5_scripts/task_4/results/learned_hamiltonian_L10_chi_nn-2_kind-output_from_input_Chimpo-2_MPO-False_class-7.npz'
 
 MLP_output_size: 10
 
