@@ -3,7 +3,7 @@
 
 # SYSTEM PARAMETERS
 bond_dimension_learning: 2
-t_max: 20.0
+t_max: 10.0
 initial_state_kind: "all_zeros" # "all_zeros" or "all_plus"
  
 # HAMILTONIAN MODEL
@@ -14,7 +14,7 @@ z_fields: False
 
 # TRAINING PARAMETERS - IMPROVED FOR MPO
 dt: 0.1
-N_epochs: 70
+N_epochs: 75
 learning_rate: 0.01 
 print_every: 5
 seed_init: 4321
@@ -24,7 +24,7 @@ learning_mode: 'output_from_input' # 'output_only' or 'output_from_input'
 # ============================================================================
 
 MLP_input_folder: '/Users/omichel/Desktop/qilimanjaro/projects/retech/RETECH_NN_MPO/weights/'
-MLP_input_file:   '/Users/omichel/Desktop/qilimanjaro/projects/retech/RETECH_NN_MPO/weights/example_input_0.npy'
+MLP_input_file:   '/Users/omichel/Desktop/qilimanjaro/projects/retech/RETECH_NN_MPO/weights/example_input.npy'
 MLP_input_size: 784
 
 #For inference only
@@ -33,7 +33,7 @@ H_input_path: '/Users/omichel/Desktop/qilimanjaro/projects/retech/retech_2025/MN
 MLP_output_size: 10
 
 # MPO mode toggle
-MPO_ON: False  # Actually use MPO decomposition
+MPO_ON: False  # Uxse MPO decomposition
 
 # MPO bond dimension
 MAX_MPO_CHI: 2
