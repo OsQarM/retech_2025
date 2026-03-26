@@ -1,7 +1,7 @@
 # config.yaml
 
-L: 4
-bond_dimension: 2
+L: 5
+bond_dimension: 4
 #Min and max values of tensor elements
 min_val: 0
 max_val: 1
@@ -11,6 +11,7 @@ seed_data: 1234
 
 #State type (only for generate_state_data_script)
 state_type: 'zeros' #options: zeros, plus, ghz
+state_topology: 'star' #options: linear, star
 
 
 # DYNAMICS TYPE

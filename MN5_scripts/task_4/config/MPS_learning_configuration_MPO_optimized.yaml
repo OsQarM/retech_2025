@@ -2,11 +2,11 @@
 # This configuration includes fixes and optimal settings for MPO convergence
 
 # SYSTEM PARAMETERS
-L: 10
+L: 5
 bond_dimension_data: 2
 bond_dimension_learning: 2
 t_max: 1.0
-initial_state_kind: "all_plus" # "all_zeros" or "all_plus"
+initial_state_kind: "all_zeros" # "all_zeros" or "all_plus"
 data_kind: 'mps' # options, mps, zeros, plus, ghz
  
 # HAMILTONIAN MODEL
@@ -17,9 +17,9 @@ z_fields: False
 
 # TRAINING PARAMETERS - IMPROVED FOR MPO
 dt: 0.01
-N_epochs: 120
+N_epochs: 500
 learning_rate: 0.01 
-print_every: 5
+print_every: 50
 seed_init: 4321
 # ============================================================================
 # MPO ARCHITECTURE - CRITICAL SETTINGS
@@ -31,7 +31,7 @@ NN_TYPE: "mps"  # "mps" or "mpo"
 MPO_SIZE: 64  #in mpo mode, it must be the cube of an integer (64, 126, 216, ...)
 
 # MPO bond dimension
-MAX_MPO_CHI: 1
+MAX_MPO_CHI: 16
 
 # Use simple MPO architecture for debugging
 SIMPLE_MPO: False  # Set to True if having convergence issues

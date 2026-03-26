@@ -2,8 +2,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 def bar_plot_strings_comparison(strings, values1, values2, file_core, labels=None, 
-                                title="Learned bitstring probabilities", xlabel="Bitstrings", 
-                                ylabel="Probability", colors=None, edgecolor='black', 
+                                title="Distribución de probabilidad MNIST", xlabel="Bitstrings", 
+                                ylabel="Probabilidad", colors=None, edgecolor='black', 
                                 figsize=(12, 7), style='grouped', alpha=0.8):
     """
     Bar plot comparing two sets of data with string labels.
@@ -24,7 +24,7 @@ def bar_plot_strings_comparison(strings, values1, values2, file_core, labels=Non
     """
     
     if labels is None:
-        labels = ('True', 'Learned')
+        labels = ('Predicción MLP', 'Predicción HL')
     if colors is None:
         colors = ('skyblue', 'salmon')
     
@@ -49,16 +49,16 @@ def bar_plot_strings_comparison(strings, values1, values2, file_core, labels=Non
             height = bar.get_height()
             if height > 0.01:  # Only label if significant
                 ax.text(bar.get_x() + bar.get_width()/2., height,
-                       f'{height:.2f}', ha='center', va='bottom', fontsize=9)
+                       f'{height:.2f}', ha='center', va='bottom', fontsize=12)
         
         for bar in bars2:
             height = bar.get_height()
             if height > 0.01:
                 ax.text(bar.get_x() + bar.get_width()/2., height,
-                       f'{height:.2f}', ha='center', va='bottom', fontsize=9)
+                       f'{height:.2f}', ha='center', va='bottom', fontsize=12)
         
         ax.set_xticks(x_pos)
-        ax.set_xticklabels(strings, rotation=45, ha='right', fontsize=10)
+        ax.set_xticklabels(strings, rotation=45, ha='right', fontsize=14)
         
     elif style == 'stacked':
         # Stacked bars
@@ -74,12 +74,12 @@ def bar_plot_strings_comparison(strings, values1, values2, file_core, labels=Non
         for i, (v1, v2) in enumerate(zip(values1, values2)):
             total = v1 + v2
             if total > 0.01:
-                ax.text(i, v1/2, f'{v1:.2f}', ha='center', va='center', fontsize=9, color='white')
-                ax.text(i, v1 + v2/2, f'{v2:.2f}', ha='center', va='center', fontsize=9, color='white')
-                ax.text(i, total, f'{total:.2f}', ha='center', va='bottom', fontsize=9)
+                ax.text(i, v1/2, f'{v1:.2f}', ha='center', va='center', fontsize=12, color='white')
+                ax.text(i, v1 + v2/2, f'{v2:.2f}', ha='center', va='center', fontsize=12, color='white')
+                ax.text(i, total, f'{total:.2f}', ha='center', va='bottom', fontsize=12)
         
         ax.set_xticks(x_pos)
-        ax.set_xticklabels(strings, rotation=45, ha='right', fontsize=10)
+        ax.set_xticklabels(strings, rotation=45, ha='right', fontsize=14)
         
     elif style == 'overlap':
         # Overlapping transparent bars
@@ -94,21 +94,24 @@ def bar_plot_strings_comparison(strings, values1, values2, file_core, labels=Non
         for i, (v1, v2) in enumerate(zip(values1, values2)):
             if v1 > 0.01:
                 ax.text(i - 0.1, v1, f'{v1:.2f}', ha='center', va='bottom', 
-                       fontsize=9, color=colors[0])
+                       fontsize=12, color=colors[0])
             if v2 > 0.01:
                 ax.text(i + 0.1, v2, f'{v2:.2f}', ha='center', va='bottom', 
-                       fontsize=9, color=colors[1])
+                       fontsize=12, color=colors[1])
         
         ax.set_xticks(x_pos)
-        ax.set_xticklabels(strings, rotation=45, ha='right', fontsize=10)
+        ax.set_xticklabels(strings, rotation=45, ha='right', fontsize=14)
     
     # Customize plot
-    ax.set_title(title, fontsize=14, fontweight='bold')
-    ax.set_xlabel(xlabel, fontsize=12)
-    ax.set_ylabel(ylabel, fontsize=12)
+    ax.set_title(title, fontsize=20, fontweight='bold')
+    ax.set_xlabel(xlabel, fontsize=18)
+    ax.set_ylabel(ylabel, fontsize=18)
+
+    # Set y-tick label fontsize
+    ax.tick_params(axis='y', labelsize=14)
     
     # Add legend
-    ax.legend(fontsize=11, framealpha=0.9)
+    ax.legend(fontsize=16, framealpha=0.9)
     
     # Add grid for better readability
     ax.grid(axis='y', alpha=0.3, linestyle='--')

@@ -32,6 +32,27 @@ def print_run_info(config):
 #2. DATA GENERATION
 #########################################
 
+def create_star_mps(N: int, chi: int, seed: int, min_val: float, max_val: float, dtype=jnp.float32):
+
+    # Create random keys
+    key = jax.random.PRNGKey(seed)
+    keys = jax.random.split(key, N)
+    
+    # Scale factor for uniform distribution
+    scale_factor = max_val - min_val
+    
+    # Initialize tensor list
+    mps = []
+
+    #central tensor. Dimension 2 with N-1 legs of chosen bond dimension
+    mps.append(min_val + scale_factor * jax.random.uniform(keys[0], (2,) + (chi,)*(N-1), dtype=dtype))
+
+    # Leg tensors
+    for i in range(1, N):
+        mps.append(min_val + scale_factor * jax.random.uniform(keys[i], (2, chi), dtype=dtype))
+
+    return mps
+
     
 def create_spin_chain_mps(N: int, chi: int, seed: int, min_val: float, max_val: float, dtype=jnp.float32):
     '''Creates list of tensors that define the MPS of a quantum spin 1/2 chain
@@ -70,7 +91,7 @@ def generate_bitstring_list(nqubits):
 
     return bitstrings
 
-def get_amplitude(mps, string, N):
+def get_linear_amplitude(mps, string, N):
     '''For each bitstring, calculate the amplitude of the MPS'''
     current = mps[0][int(string[0])]
     # Contract with middle tensors
@@ -85,13 +106,28 @@ def get_amplitude(mps, string, N):
     
     return amplitude
 
-def extract_amplitudes(mps):
+def get_star_amplitude(mps, string, num_qubits):
+    current = mps[0][int(string[0])]  # shape: (chi,)*(num_qubits-1)
+    for i in range(1, num_qubits):
+        leg_slice = mps[i][int(string[i])]  # shape: (chi,)
+        current = jnp.tensordot(current, leg_slice, axes=([0], [0]))
+    return float(current)
+
+
+def extract_amplitudes(mps, state_topology):
     num_qubits = len(mps)
     bitstrings = generate_bitstring_list(num_qubits)
     probs = []
-    for string in bitstrings:
-        amp = get_amplitude(mps, string, num_qubits)
-        probs.append(amp**2)
+
+    if state_topology == "linear":
+        for string in bitstrings:
+            amp = get_linear_amplitude(mps, string, num_qubits)
+            probs.append(amp**2)
+    elif state_topology == "star":
+            for string in bitstrings:
+                amp = get_star_amplitude(mps, string, num_qubits)
+                probs.append(amp**2)
+
 
     total_prob = sum(probs)
     normalized_probs = [p/total_prob for p in probs]
@@ -120,7 +156,7 @@ def save_sample_bitstrings(bitstrings, counts, prefix = None):
     #Create config file and save here L, chi, Nshots
     filename_core = f"L{N}_Chi_{chi}_R{N_shots}"
 
-    filename = f'./data/experimental_data_{prefix}_{filename_core}_counts.csv'
+    filename = f'../data/experimental_data_{prefix}_{filename_core}_counts.csv'
 
     bitstrings_with_quotes = ["'" + bs for bs in bitstrings]
     
@@ -198,16 +234,22 @@ if __name__ == "__main__":
     min_val = CONFIG['min_val']
     max_val = CONFIG['max_val']
     N_shots = CONFIG['N_shots']
+    state_topology = CONFIG['state_topology']
     print_run_info(CONFIG)
 
-    mps = create_spin_chain_mps(N, chi, seed, min_val, max_val)
+    if state_topology == "linear":
+        mps = create_spin_chain_mps(N, chi, seed, min_val, max_val)
+    elif state_topology == "star":
+        mps = create_star_mps(N, chi, seed, min_val, max_val)
+    else:
+        raise ValueError(f"{state_topology} incorrect. Choose 'linear' or 'star'")
 
     # Check the shapes
     print(f"Number of tensors: {len(mps)}")
     for i, tensor in enumerate(mps):
         print(f"Tensor {i}: shape = {tensor.shape}")
 
-    bitstrings, probs = extract_amplitudes(mps)
+    bitstrings, probs = extract_amplitudes(mps, state_topology)
 
     counts_shots = sample_from_probs(N, N_shots, probs, seed)
 

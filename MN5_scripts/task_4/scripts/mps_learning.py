@@ -175,10 +175,138 @@ def run_mpo_inference(mpo_model, input_data, psi0, OPS_LIST, config, t_grid_fine
 #1. PLOTS AND SAVING
 #################################################################
 
+# def bar_plot_strings_comparison(strings, values1, values2, config, labels=None, 
+#                                 title="Distribución de probabilidad, L=6", xlabel="Bitstrings", 
+#                                 ylabel="Probabilidad", colors=None, edgecolor='black', 
+#                                 figsize=(12, 7), style='grouped', alpha=0.8):
+#     """
+#     Bar plot comparing two sets of data with string labels.
+    
+#     Parameters:
+#     -----------
+#     strings : list of str
+#         String labels for x-axis
+#     values1, values2 : arrays
+#         Two sets of values to compare
+#     labels : tuple of str, optional
+#         Labels for the two data sets (default: ('Set 1', 'Set 2'))
+#     colors : tuple of str, optional
+#         Colors for the two data sets (default: ('skyblue', 'salmon'))
+#     style : str
+#         'grouped' for side-by-side bars, 'stacked' for stacked bars,
+#         'overlap' for overlapping transparent bars
+#     """
+    
+#     if labels is None:
+#         labels = ('Real', 'Aprendida')
+#     if colors is None:
+#         colors = ('skyblue', 'salmon')
+    
+#     # Create figure and axis
+#     fig, ax = plt.subplots(figsize=figsize)
+    
+#     n = len(strings)
+#     x_pos = np.arange(n)
+#     width = 0.35  # Width of bars
+    
+#     if style == 'grouped':
+#         # Side-by-side bars
+#         bars1 = ax.bar(x_pos - width/2, values1, width, 
+#                       label=labels[0], color=colors[0], 
+#                       edgecolor=edgecolor, alpha=alpha)
+#         bars2 = ax.bar(x_pos + width/2, values2, width, 
+#                       label=labels[1], color=colors[1], 
+#                       edgecolor=edgecolor, alpha=alpha)
+        
+#         # Add value labels
+#         # for bar in bars1:
+#         #     height = bar.get_height()
+#         #     if height > 0.01:  # Only label if significant
+#         #         ax.text(bar.get_x() + bar.get_width()/2., height,
+#         #                f'{height:.2f}', ha='center', va='bottom', fontsize=9)
+        
+#         # for bar in bars2:
+#         #     height = bar.get_height()
+#         #     if height > 0.01:
+#         #         ax.text(bar.get_x() + bar.get_width()/2., height,
+#         #                f'{height:.2f}', ha='center', va='bottom', fontsize=9)
+        
+#         ax.set_xticks(x_pos)
+#         ax.set_xticklabels(strings, rotation=45, ha='right', fontsize=14)
+        
+#     elif style == 'stacked':
+#         # Stacked bars
+#         bars1 = ax.bar(x_pos, values1, width, 
+#                       label=labels[0], color=colors[0], 
+#                       edgecolor=edgecolor, alpha=alpha)
+#         bars2 = ax.bar(x_pos, values2, width, 
+#                       label=labels[1], color=colors[1], 
+#                       edgecolor=edgecolor, alpha=alpha,
+#                       bottom=values1)
+        
+#         # # Add value labels
+#         # for i, (v1, v2) in enumerate(zip(values1, values2)):
+#         #     total = v1 + v2
+#         #     if total > 0.01:
+#         #         ax.text(i, v1/2, f'{v1:.2f}', ha='center', va='center', fontsize=9, color='white')
+#         #         ax.text(i, v1 + v2/2, f'{v2:.2f}', ha='center', va='center', fontsize=9, color='white')
+#         #         ax.text(i, total, f'{total:.2f}', ha='center', va='bottom', fontsize=9)
+        
+#         ax.set_xticks(x_pos)
+#         ax.set_xticklabels(strings, rotation=45, ha='right', fontsize=14)
+        
+#     elif style == 'overlap':
+#         # Overlapping transparent bars
+#         bars1 = ax.bar(x_pos, values1, width, 
+#                       label=labels[0], color=colors[0], 
+#                       edgecolor=edgecolor, alpha=0.6)
+#         bars2 = ax.bar(x_pos, values2, width, 
+#                       label=labels[1], color=colors[1], 
+#                       edgecolor=edgecolor, alpha=0.6)
+        
+#         # # Add value labels
+#         # for i, (v1, v2) in enumerate(zip(values1, values2)):
+#         #     if v1 > 0.01:
+#         #         ax.text(i - 0.1, v1, f'{v1:.2f}', ha='center', va='bottom', 
+#         #                fontsize=9, color=colors[0])
+#         #     if v2 > 0.01:
+#         #         ax.text(i + 0.1, v2, f'{v2:.2f}', ha='center', va='bottom', 
+#         #                fontsize=9, color=colors[1])
+        
+#         ax.set_xticks(x_pos)
+#         ax.set_xticklabels(strings, rotation=45, ha='right', fontsize=14)
+    
+#     # Customize plot
+#     ax.set_title(title, fontsize=20, fontweight='bold')
+#     ax.set_xlabel(xlabel, fontsize=16)
+#     ax.set_ylabel(ylabel, fontsize=16)
+    
+#     # Add legend
+#     ax.legend(fontsize=15, framealpha=0.9)
+    
+#     # Add grid for better readability
+#     ax.grid(axis='y', alpha=0.3, linestyle='--')
+
+#     N = config['L']
+#     chi_data = config['bond_dimension_data']
+#     chi_nn = config['bond_dimension_learning']
+#     kind = config['data_kind']
+#     nn_type = config['NN_TYPE']
+#     filename_core = f"L{N}_nn-{nn_type}_kind-{kind}_Chidata{chi_data}_ChiNN{chi_nn}"
+#     filename = f'./bitstring_comparison_{filename_core}'
+    
+#     # Adjust layout
+#     plt.tight_layout()
+#     plt.savefig(f'../plots/{filename}.png', bbox_inches='tight', dpi=300)
+    
+#     return fig, ax, (bars1, bars2) if style != 'stacked' else (bars1, bars2)
+
+
 def bar_plot_strings_comparison(strings, values1, values2, config, labels=None, 
-                                title="Learned bitstring probabilities", xlabel="Bitstrings", 
-                                ylabel="Probability", colors=None, edgecolor='black', 
-                                figsize=(12, 7), style='grouped', alpha=0.8):
+                                title="Distribución de probabilidad, L=6", xlabel="Bitstrings", 
+                                ylabel="Probabilidad", colors=None, edgecolor='black', 
+                                figsize=(12, 7), style='grouped', alpha=0.8,
+                                y_tick_fontsize=14, x_tick_fontsize=14):
     """
     Bar plot comparing two sets of data with string labels.
     
@@ -195,10 +323,14 @@ def bar_plot_strings_comparison(strings, values1, values2, config, labels=None,
     style : str
         'grouped' for side-by-side bars, 'stacked' for stacked bars,
         'overlap' for overlapping transparent bars
+    y_tick_fontsize : int
+        Fontsize for y-axis tick labels
+    x_tick_fontsize : int
+        Fontsize for x-axis tick labels
     """
     
     if labels is None:
-        labels = ('True', 'Learned')
+        labels = ('Real', 'Aprendida')
     if colors is None:
         colors = ('skyblue', 'salmon')
     
@@ -209,6 +341,38 @@ def bar_plot_strings_comparison(strings, values1, values2, config, labels=None,
     x_pos = np.arange(n)
     width = 0.35  # Width of bars
     
+    # Determine number of x-tick labels based on number of bins (strings)
+    # Goal: have approximately n/4 labels for n=2^L, but ensure at least 2 labels
+    # For 4 qubits (16 bins): ~8 labels, for 6 qubits (64 bins): ~12-16 labels
+    n_bins = len(strings)
+    
+    # Calculate desired number of labels (aim for ~n_bins/2 but with max reasonable)
+    if n_bins <= 16:
+        # For small systems, show all labels
+        n_labels = n_bins
+        tick_indices = np.arange(n_bins)
+        tick_labels = strings
+    else:
+        # For larger systems, show approximately sqrt(n_bins) to n_bins/4 labels
+        # Aim for 8-16 labels depending on size
+        if n_bins <= 32:  # 5 qubits
+            n_labels = 8
+        elif n_bins <= 64:  # 6 qubits
+            n_labels = 12
+        elif n_bins <= 128:  # 7 qubits
+            n_labels = 16
+        elif n_bins <= 256:  # 8 qubits
+            n_labels = 20
+        else:  # 9+ qubits
+            n_labels = 24
+        
+        # Ensure we don't try to show more labels than bins
+        n_labels = min(n_labels, n_bins)
+        
+        # Calculate equally spaced indices
+        tick_indices = np.linspace(0, n_bins - 1, n_labels, dtype=int)
+        tick_labels = [strings[i] for i in tick_indices]
+    
     if style == 'grouped':
         # Side-by-side bars
         bars1 = ax.bar(x_pos - width/2, values1, width, 
@@ -218,21 +382,8 @@ def bar_plot_strings_comparison(strings, values1, values2, config, labels=None,
                       label=labels[1], color=colors[1], 
                       edgecolor=edgecolor, alpha=alpha)
         
-        # Add value labels
-        for bar in bars1:
-            height = bar.get_height()
-            if height > 0.01:  # Only label if significant
-                ax.text(bar.get_x() + bar.get_width()/2., height,
-                       f'{height:.2f}', ha='center', va='bottom', fontsize=9)
-        
-        for bar in bars2:
-            height = bar.get_height()
-            if height > 0.01:
-                ax.text(bar.get_x() + bar.get_width()/2., height,
-                       f'{height:.2f}', ha='center', va='bottom', fontsize=9)
-        
-        ax.set_xticks(x_pos)
-        ax.set_xticklabels(strings, rotation=45, ha='right', fontsize=10)
+        ax.set_xticks(x_pos[tick_indices])
+        ax.set_xticklabels(tick_labels, rotation=45, ha='right', fontsize=x_tick_fontsize)
         
     elif style == 'stacked':
         # Stacked bars
@@ -244,16 +395,8 @@ def bar_plot_strings_comparison(strings, values1, values2, config, labels=None,
                       edgecolor=edgecolor, alpha=alpha,
                       bottom=values1)
         
-        # Add value labels
-        for i, (v1, v2) in enumerate(zip(values1, values2)):
-            total = v1 + v2
-            if total > 0.01:
-                ax.text(i, v1/2, f'{v1:.2f}', ha='center', va='center', fontsize=9, color='white')
-                ax.text(i, v1 + v2/2, f'{v2:.2f}', ha='center', va='center', fontsize=9, color='white')
-                ax.text(i, total, f'{total:.2f}', ha='center', va='bottom', fontsize=9)
-        
-        ax.set_xticks(x_pos)
-        ax.set_xticklabels(strings, rotation=45, ha='right', fontsize=10)
+        ax.set_xticks(x_pos[tick_indices])
+        ax.set_xticklabels(tick_labels, rotation=45, ha='right', fontsize=x_tick_fontsize)
         
     elif style == 'overlap':
         # Overlapping transparent bars
@@ -264,25 +407,19 @@ def bar_plot_strings_comparison(strings, values1, values2, config, labels=None,
                       label=labels[1], color=colors[1], 
                       edgecolor=edgecolor, alpha=0.6)
         
-        # Add value labels
-        for i, (v1, v2) in enumerate(zip(values1, values2)):
-            if v1 > 0.01:
-                ax.text(i - 0.1, v1, f'{v1:.2f}', ha='center', va='bottom', 
-                       fontsize=9, color=colors[0])
-            if v2 > 0.01:
-                ax.text(i + 0.1, v2, f'{v2:.2f}', ha='center', va='bottom', 
-                       fontsize=9, color=colors[1])
-        
-        ax.set_xticks(x_pos)
-        ax.set_xticklabels(strings, rotation=45, ha='right', fontsize=10)
+        ax.set_xticks(x_pos[tick_indices])
+        ax.set_xticklabels(tick_labels, rotation=45, ha='right', fontsize=x_tick_fontsize)
     
     # Customize plot
-    ax.set_title(title, fontsize=14, fontweight='bold')
-    ax.set_xlabel(xlabel, fontsize=12)
-    ax.set_ylabel(ylabel, fontsize=12)
+    ax.set_title(title, fontsize=20, fontweight='bold')
+    ax.set_xlabel(xlabel, fontsize=18)
+    ax.set_ylabel(ylabel, fontsize=18)
+    
+    # Set y-tick label fontsize
+    ax.tick_params(axis='y', labelsize=y_tick_fontsize)
     
     # Add legend
-    ax.legend(fontsize=11, framealpha=0.9)
+    ax.legend(fontsize=18, framealpha=0.9)
     
     # Add grid for better readability
     ax.grid(axis='y', alpha=0.3, linestyle='--')
@@ -300,6 +437,8 @@ def bar_plot_strings_comparison(strings, values1, values2, config, labels=None,
     plt.savefig(f'../plots/{filename}.png', bbox_inches='tight', dpi=300)
     
     return fig, ax, (bars1, bars2) if style != 'stacked' else (bars1, bars2)
+
+
 
 
 def plot_training_loss(losses, config):
@@ -332,7 +471,7 @@ def save_learned_distribution(bitstrings, probs_np, config):
     nn_type = config['NN_TYPE']
     
     filename_core = f"L{N}_nn-{nn_type}_kind-{kind}_Chidata{chi_data}_ChiNN{chi_nn}"
-    filename = f'results/learned_distribution_{filename_core}.npy'
+    filename = f'../results/learned_distribution_{filename_core}.npy'
     
     # Save as structured array with bitstrings and probabilities
     data = np.array(list(zip(bitstrings, probs_np)))
@@ -347,7 +486,7 @@ def save_loss_history(loss_history, config):
     nn_type = config['NN_TYPE']
     
     filename_core = f"L{N}_nn-{nn_type}_kind-{kind}_Chidata{chi_data}_ChiNN{chi_nn}"
-    filename = f'results/loss_history_{filename_core}.npy'
+    filename = f'../results/loss_history_{filename_core}.npy'
     
     np.save(filename, np.array(loss_history))
         
@@ -1124,10 +1263,11 @@ class OperatorClass:
        The operators will be applied to each qubit, and we will allow for the construction of any
        combination of Pauli strings 
     '''
-    def __init__(self, L, dtype=torch.complex64):
+    def __init__(self, L, topology = "linear", dtype=torch.complex64):
 
         self.L = L
         self.dim = 2**L
+        self.topology = topology # "linear" or "star"
         self.pauli_basis = {}
         self.pauli_basis['X'], self.pauli_basis['Y'], self.pauli_basis['Z'], self.pauli_basis['I'] = paulis(dtype)
         self.operators = []
@@ -1153,9 +1293,29 @@ class OperatorClass:
         for i in range(self.L - len(pauli_string) + 1):
                 #Create identity operators for each qubit
                 ops = [self.pauli_basis['I']]*self.L
-                for j, char in enumerate(pauli_string):
-                     #Build string
-                     ops[i+j] = self.pauli_basis[char]
+
+                if self.topology == "linear":
+                    for j, char in enumerate(pauli_string):
+                        #Build string starting at i.
+                        #At each iterations the string displaces one site
+                        ops[i+j] = self.pauli_basis[char]
+
+                elif self.topology == "star":
+                    if len(pauli_string) == 1:
+                        # Single-qubit: place on qubit i (same as linear)
+                        ops[i] = self.pauli_basis[pauli_string[0]]
+                    else:
+                        #Puts first operator in center
+                        ops[0] = self.pauli_basis[pauli_string[0]]
+                        #Starts putting in qubits around. 
+                        # As i increases it skips the qubits where operators have been placed
+                        for j, char in enumerate(pauli_string[1:]):
+                            ops[i+1+j] = self.pauli_basis[char]
+
+                else:
+                    raise ValueError(f"Topology {self.topology} invalid. Choose 'linear' or 'star'.")
+
+
                 self.operators.append(kron_n(ops))
         print(f"{pauli_string} terms added to the Hamiltonian")
 
@@ -1456,7 +1616,7 @@ if __name__ == "__main__":
     psi0 = prepare_initial_state(L, initial_state_kind)
     
     # Initialize Hamiltonian operators
-    OPS_LIST = OperatorClass(L)
+    OPS_LIST = OperatorClass(L, topology="star")
     OPS_LIST.add_operators('ZZ')
     OPS_LIST.add_operators('X')
     OPS_LIST.add_operators('Z')
