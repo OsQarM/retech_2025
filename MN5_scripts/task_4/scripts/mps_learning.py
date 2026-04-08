@@ -1263,9 +1263,10 @@ class OperatorClass:
        The operators will be applied to each qubit, and we will allow for the construction of any
        combination of Pauli strings 
     '''
-    def __init__(self, L, topology = "linear", dtype=torch.complex64):
+    def __init__(self, L, dtype=torch.complex64):
 
         self.L = L
+        self.topology = topology # "linear" or "star"
         self.dim = 2**L
         self.topology = topology # "linear" or "star"
         self.pauli_basis = {}
@@ -1295,10 +1296,25 @@ class OperatorClass:
                 ops = [self.pauli_basis['I']]*self.L
 
                 if self.topology == "linear":
+    
+                if self.topology == "linear":
                     for j, char in enumerate(pauli_string):
-                        #Build string starting at i.
+                           #Build string starting at i.
+                        #At each iterations the string displaces one site starting at i.
                         #At each iterations the string displaces one site
-                        ops[i+j] = self.pauli_basis[char]
+                           ops[i+j] = self.pauli_basis[char]
+
+                elif self.topology == "star":
+                    #Puts first operator in center
+                    ops[0] = self.pauli_basis[pauli_string[0]]
+                    #Starts putting in qubits around. 
+                    # As i increases it skips the qubits where operators have been placed
+                    for j, char in enumerate(pauli_string[1:]):
+                        ops[i+1+j] = self.pauli_basis[char]
+
+                else:
+                    raise ValueError(f"Topology {self.topology} invalid. Choose 'linear' or 'star'.")
+
 
                 elif self.topology == "star":
                     if len(pauli_string) == 1:
@@ -1616,7 +1632,7 @@ if __name__ == "__main__":
     psi0 = prepare_initial_state(L, initial_state_kind)
     
     # Initialize Hamiltonian operators
-    OPS_LIST = OperatorClass(L, topology="star")
+    OPS_LIST = OperatorClass(L, topology="linear", topology="star")
     OPS_LIST.add_operators('ZZ')
     OPS_LIST.add_operators('X')
     OPS_LIST.add_operators('Z')

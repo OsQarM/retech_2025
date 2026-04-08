@@ -13,9 +13,8 @@ seed_data: 1234
 state_type: 'zeros' #options: zeros, plus, ghz
 state_topology: 'star' #options: linear, star
 
-
 # DYNAMICS TYPE
-dynamics_type: "lindblad"  # "schrodinger" or "lindblad"
+dynamics_type: "schrodinger"  # "schrodinger" or "lindblad"
 
 # NOISE MODEL
 noise_model: "global" # "global" (same for all qubits) or "local" (per-qubit)
