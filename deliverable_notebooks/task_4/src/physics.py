@@ -81,6 +81,22 @@ def prepare_initial_state(L, kind, dtype=torch.complex64):
                         f"Use 'all_zeros' or 'all_plus'")
     return psi0
 
+
+def initial_state_from_input(L, data, dtype=torch.complex64):
+
+    if 2**L < len(data):
+        raise ValueError("Not enough qubits to encode input")
+
+    #Create empty state
+    psi0 = torch.zeros(2**L, dtype=dtype)
+
+    #Fill entries until loading all data, leave the rest as zero
+    for i in range(len(data)):
+        psi0[i] = data[i]
+    
+    #Normalize and return
+    return psi0 / torch.norm(psi0)
+
 def paulis(dtype=torch.complex64, requires_grad=False):
     '''Creates single-qubit basis operators'''
     sx = torch.tensor([[0., 1.], [1., 0.]], dtype=dtype, requires_grad=requires_grad)
