@@ -551,7 +551,7 @@ if __name__ == "__main__":
         L,
         CONFIG, 
         t_grid_fine, 
-        learning_rate, 
+        learning_rate,  
         bitstring_probs, 
         CONFIG['print_every']
     )

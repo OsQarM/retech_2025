@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 
-def bar_plot_strings_comparison(strings, values1, values2, config, labels=None, 
+def bar_plot_strings_comparison(strings, values1, values2, config, L=10, labels=None, 
                                 title="Distribución de probabilidad, L=6", xlabel="Bitstrings", 
                                 ylabel="Probabilidad", colors=None, edgecolor='black', 
                                 figsize=(12, 7), style='grouped', alpha=0.8,
@@ -110,7 +110,7 @@ def bar_plot_strings_comparison(strings, values1, values2, config, labels=None,
         ax.set_xticklabels(tick_labels, rotation=45, ha='right', fontsize=x_tick_fontsize)
     
     # Customize plot
-    ax.set_title(title, fontsize=20, fontweight='bold')
+    ax.set_title(f"Distribución de probabilidad, L={L}", fontsize=20, fontweight='bold')
     ax.set_xlabel(xlabel, fontsize=18)
     ax.set_ylabel(ylabel, fontsize=18)
     

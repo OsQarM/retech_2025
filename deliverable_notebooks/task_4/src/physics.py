@@ -168,8 +168,8 @@ def time_evolution(psi, theta, OPS_LIST, L, t_grid):
     return psi_t
 
 
-def physics_computation(params, psi0, OPS_LIST, CONFIG, t_grid):
+def physics_computation(params, psi0, OPS_LIST, L, t_grid):
 
-    psi_t = time_evolution(psi0, params['theta'], OPS_LIST, CONFIG['L'], t_grid)
+    psi_t = time_evolution(psi0, params['theta'], OPS_LIST, L, t_grid)
     
     return psi_t
